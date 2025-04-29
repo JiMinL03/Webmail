@@ -72,6 +72,12 @@
             <artifactId>jakarta.servlet.jsp.jstl-api</artifactId>
         </dependency>
         <!-- 240102 LJM: end -->
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>4.12</version>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>
