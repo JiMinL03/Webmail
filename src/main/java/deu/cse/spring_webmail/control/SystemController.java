@@ -128,14 +128,28 @@ public class SystemController {
     }
 
     @GetMapping("/main_menu")
-    public String mainMenu(Model model) {
+    public String mainMenu(@RequestParam(defaultValue = "1") int page, Model model, HttpSession session) {
         Pop3Agent pop3 = new Pop3Agent();
         pop3.setHost((String) session.getAttribute("host"));
         pop3.setUserid((String) session.getAttribute("userid"));
         pop3.setPassword((String) session.getAttribute("password"));
 
-        String messageList = pop3.getMessageList();
+        int pageSize = 5;
+        int totalCount = pop3.getMessageCount();
+        int totalPages = (int) Math.ceil((double) totalCount / pageSize);
+
+        int start = (page - 1) * pageSize + 1;
+        int end = Math.min(start + pageSize - 1, totalCount);
+        /*
+        int start = totalCount - (page - 1) * pageSize;
+        int end = Math.max(start - pageSize + 1, 1);
+        */
+        System.out.println("start: " + start + " end:" + end);
+        //String messageList = pop3.getMessageList();
+        String messageList = pop3.getMessageList(start, end);
         model.addAttribute("messageList", messageList);
+        model.addAttribute("currentPage", page);
+        model.addAttribute("totalPages", totalPages);
         return "main_menu";
     }
 
@@ -226,9 +240,9 @@ public class SystemController {
 
     /**
      * https://34codefactory.wordpress.com/2019/06/16/how-to-display-image-in-jsp-using-spring-code-factory/
-     * 
+     *
      * @param imageName
-     * @return 
+     * @return
      */
     @RequestMapping(value = "/get_image/{imageName}")
     @ResponseBody
@@ -248,7 +262,7 @@ public class SystemController {
         byte[] imageInByte;
         try {
             byteArrayOutputStream = new ByteArrayOutputStream();
-            bufferedImage = ImageIO.read(new File(folderPath + File.separator + imageName) );
+            bufferedImage = ImageIO.read(new File(folderPath + File.separator + imageName));
             String format = imageName.substring(imageName.lastIndexOf(".") + 1);
             ImageIO.write(bufferedImage, format, byteArrayOutputStream);
             byteArrayOutputStream.flush();
