@@ -40,7 +40,38 @@
 
         <!-- 메시지 삭제 링크를 누르면 바로 삭제되어 실수할 수 있음. 해결 방법은? -->
         <div id="main">
-            ${messageList}
+            <!-- 메시지 목록 -->
+            <c:forEach var="message" items="${messageList}">
+                <div>
+                    <p>${message}</p>
+                    <hr/>
+                </div>
+            </c:forEach>
+
+            <!-- 페이징 링크 -->
+            <div>
+                <!-- 이전 페이지 -->
+                <c:if test="${currentPage > 1}">
+                    <a href="?page=${currentPage - 1}">이전</a>
+                </c:if>
+
+                <!-- 페이지 번호 -->
+                <c:forEach begin="1" end="${totalPages}" var="i">
+                    <c:choose>
+                        <c:when test="${i == currentPage}">
+                            <strong>[${i}]</strong>
+                        </c:when>
+                        <c:otherwise>
+                            <a href="?page=${i}">[${i}]</a>
+                        </c:otherwise>
+                    </c:choose>
+                </c:forEach>
+
+                <!-- 다음 페이지 -->
+                <c:if test="${currentPage < totalPages}">
+                    <a href="?page=${currentPage + 1}">다음</a>
+                </c:if>
+            </div>
         </div>
 
         <%@include file="footer.jspf"%>
