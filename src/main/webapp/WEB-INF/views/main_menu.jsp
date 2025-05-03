@@ -74,6 +74,15 @@
             </div>
         </div>
 
+        <script type="text/javascript">
+            function confirmDelete(msgId) {
+                var confirmation = confirm("정말 이 메시지를 삭제하시겠습니까?");
+                if (confirmation) {
+                    // 사용자가 '확인'을 누르면 삭제 요청을 보내도록 처리
+                    window.location.href = 'delete_mail.do?msgid=' + msgId;
+                }
+            }
+        </script>
         <%@include file="footer.jspf"%>
     </body>
 </html>

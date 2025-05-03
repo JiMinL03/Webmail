@@ -143,7 +143,7 @@ public class SystemController {
         /*
         int start = totalCount - (page - 1) * pageSize;
         int end = Math.max(start - pageSize + 1, 1);
-        */
+         */
         System.out.println("start: " + start + " end:" + end);
         //String messageList = pop3.getMessageList();
         String messageList = pop3.getMessageList(start, end);
