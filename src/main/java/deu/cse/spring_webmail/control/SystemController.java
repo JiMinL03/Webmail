@@ -138,12 +138,12 @@ public class SystemController {
         int totalCount = pop3.getMessageCount();
         int totalPages = (int) Math.ceil((double) totalCount / pageSize);
 
-        int start = (page - 1) * pageSize + 1;
-        int end = Math.min(start + pageSize - 1, totalCount);
-        /*
+        //int start = (page - 1) * pageSize + 1;
+        //int end = Math.min(start + pageSize - 1, totalCount);
+        
         int start = totalCount - (page - 1) * pageSize;
         int end = Math.max(start - pageSize + 1, 1);
-         */
+         
         System.out.println("start: " + start + " end:" + end);
         //String messageList = pop3.getMessageList();
         String messageList = pop3.getMessageList(start, end);
