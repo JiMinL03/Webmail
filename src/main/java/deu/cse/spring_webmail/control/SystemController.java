@@ -66,16 +66,18 @@ public class SystemController {
     }
 
     @RequestMapping(value = "/login.do", method = {RequestMethod.GET, RequestMethod.POST})
-    public String loginDo(@RequestParam Integer menu) {
+    public String loginDo(@RequestParam Integer menu, RedirectAttributes attrs) { // [변경 부분] RedirectAttributes attrs 추가
         String url = "";
         log.debug("로그인 처리: menu = {}", menu);
-        switch (menu) {
-            case CommandType.LOGIN:
+        switch (menu) { 
+            case CommandType.LOGIN: // 로그인 요청
                 String host = (String) request.getSession().getAttribute("host");
                 String userid = request.getParameter("userid");
                 String password = request.getParameter("passwd");
+                
+                // Pop3Agent 모델 클래스를 이용해서 로그인 정보가 유효한지 확인하라
+                // Pop3Agent 모델 클래스에서 로그인 유효성 검사를 실시해라
 
-                // Check the login information is valid using <<model>>Pop3Agent.
                 Pop3Agent pop3Agent = new Pop3Agent(host, userid, password);
                 boolean isLoginSuccess = pop3Agent.validate();
 
@@ -84,14 +86,16 @@ public class SystemController {
                     if (isAdmin(userid)) {
                         // HttpSession 객체에 userid를 등록해 둔다.
                         session.setAttribute("userid", userid);
+                        attrs.addFlashAttribute("msg", "관리자 로그인이 맞습니까?"); // [변경 부분]
                         // response.sendRedirect("admin_menu.jsp");
-                        url = "redirect:/admin_menu";
+                        url = "redirect:/admin_menu"; // admin_menu.jsp 이동
                     } else {
                         // HttpSession 객체에 userid와 password를 등록해 둔다.
                         session.setAttribute("userid", userid);
                         session.setAttribute("password", password);
                         // response.sendRedirect("main_menu.jsp");
-                        url = "redirect:/main_menu";  // URL이 http://localhost:8080/webmail/main_menu 이와 같이 됨.
+                        attrs.addFlashAttribute("msg", "사용자 로그인이 맞습니까?"); // [변경 부분]
+                        url = "redirect:/main_menu";  // URL이 http://localhost:8080/webmail/main_menu 이와 같이 됨. // main_menu.jsp로 이동
                         // url = "/main_menu";  // URL이 http://localhost:8080/webmail/login.do?menu=91 이와 같이 되어 안 좋음
                     }
                 } else {
@@ -100,9 +104,10 @@ public class SystemController {
                     url = "redirect:/login_fail";
                 }
                 break;
-            case CommandType.LOGOUT:
-                session.invalidate();
-                url = "redirect:/";  // redirect: 반드시 넣어야만 컨텍스트 루트로 갈 수 있음
+                
+            case CommandType.LOGOUT: // 로그아웃 요청
+                session.invalidate(); // 현재 세션 무효화
+                url = "redirect:/";  // redirect: 반드시 넣어야만 컨텍스트 루트로 갈 수 있음 => "/webmail"로 이동
                 break;
             default:
                 break;
