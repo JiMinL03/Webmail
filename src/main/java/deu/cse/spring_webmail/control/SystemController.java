@@ -47,16 +47,14 @@ public class SystemController {
     @Autowired
     private HttpServletRequest request;
 
-    @Value("${root.id}")
-    private String ROOT_ID;
-    @Value("${root.password}")
-    private String ROOT_PASSWORD;
+    @Value("${admin.password}")
+    private String ADMIN_PASSWORD;//1234
     @Value("${admin.id}")
-    private String ADMINISTRATOR;  //  = "admin";
+    private String ADMINISTRATOR;  //  = "admin@admin.com";
     @Value("${james.control.port}")
-    private Integer JAMES_CONTROL_PORT;
+    private Integer JAMES_CONTROL_PORT;//8000
     @Value("${james.host}")
-    private String JAMES_HOST;
+    private String JAMES_HOST;//127.0.0.1
 
     @GetMapping("/")
     public String index() {
@@ -153,16 +151,22 @@ public class SystemController {
         return "main_menu";
     }
 
-    @GetMapping("/admin_menu")
+     @GetMapping("/admin_menu")
     public String adminMenu(Model model) {
-        log.debug("root.id = {}, root.password = {}, admin.id = {}",
-                ROOT_ID, ROOT_PASSWORD, ADMINISTRATOR);
+        String userid = (String) session.getAttribute("userid");
+
+        if (userid == null || userid.isEmpty()) {
+            log.warn("비로그인 상태로 admin_menu 접근 시도");
+            return "redirect:/login.do";
+        }
+        log.debug("root.password = {}, admin.id = {}",
+                ADMIN_PASSWORD, ADMINISTRATOR);
 
         model.addAttribute("userList", getUserList());
         return "admin/admin_menu";
     }
 
-    @GetMapping("/add_user")
+     @GetMapping("/add_user")
     public String addUser() {
         return "admin/add_user";
     }
@@ -174,9 +178,9 @@ public class SystemController {
                 id, password, JAMES_CONTROL_PORT);
 
         try {
-            String cwd = ctx.getRealPath(".");
-            UserAdminAgent agent = new UserAdminAgent(JAMES_HOST, JAMES_CONTROL_PORT, cwd,
-                    ROOT_ID, ROOT_PASSWORD, ADMINISTRATOR);
+
+            UserAdminAgent agent = new UserAdminAgent(JAMES_HOST, JAMES_CONTROL_PORT,
+                    ADMIN_PASSWORD, ADMINISTRATOR);
 
             // if (addUser successful)  사용자 등록 성공 팦업창
             // else 사용자 등록 실패 팝업창
@@ -211,8 +215,8 @@ public class SystemController {
 
         try {
             String cwd = ctx.getRealPath(".");
-            UserAdminAgent agent = new UserAdminAgent(JAMES_HOST, JAMES_CONTROL_PORT, cwd,
-                    ROOT_ID, ROOT_PASSWORD, ADMINISTRATOR);
+            UserAdminAgent agent = new UserAdminAgent(JAMES_HOST, JAMES_CONTROL_PORT,
+                    ADMIN_PASSWORD, ADMINISTRATOR);
             agent.deleteUsers(selectedUsers);  // 수정!!!
         } catch (Exception ex) {
             log.error("delete_user.do : 예외 = {}", ex);
@@ -222,14 +226,14 @@ public class SystemController {
     }
 
     private List<String> getUserList() {
-        String cwd = ctx.getRealPath(".");
-        UserAdminAgent agent = new UserAdminAgent(JAMES_HOST, JAMES_CONTROL_PORT, cwd,
-                ROOT_ID, ROOT_PASSWORD, ADMINISTRATOR);
+
+        UserAdminAgent agent = new UserAdminAgent(JAMES_HOST, JAMES_CONTROL_PORT,
+                ADMIN_PASSWORD, ADMINISTRATOR);
         List<String> userList = agent.getUserList();
         log.debug("userList = {}", userList);
 
         //(주의) root.id와 같이 '.'을 넣으면 안 됨.
-        userList.sort((e1, e2) -> e1.compareTo(e2));
+        userList.sort((e1, e2) -> e1.compareTo(e2));//알파벳 순으로 정렬
         return userList;
     }
 

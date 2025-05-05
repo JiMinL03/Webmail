@@ -10,7 +10,17 @@ import java.io.OutputStream;
 import java.net.Socket;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.RestTemplate;
 
 /**
  *
@@ -19,43 +29,35 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class UserAdminAgent {
 
+    private final RestTemplate restTemplate = new RestTemplate();
+
     private String server;
     private int port;
     Socket socket = null;
     InputStream is = null;
     OutputStream os = null;
     boolean isConnected = false;
-    private String ROOT_ID;
-    private String ROOT_PASSWORD;
+
+    private String ADMIN_PASSWORD;
     private String ADMIN_ID;
     // private final String EOL = "\n";
     private final String EOL = "\r\n";
-    private String cwd;
+
+    private final String baseUrl = "http://localhost:8000";
 
     public UserAdminAgent() {
     }
 
-    public UserAdminAgent(String server, int port, String cwd,
-            String root_id, String root_pass, String admin_id) {
+    public UserAdminAgent(String server, int port,
+            String admin_pass, String admin_id) {
         log.debug("UserAdminAgent created: server = " + server + ", port = " + port);
         this.server = server;  // 127.0.0.1
-        this.port = port;  // 4555
-        this.cwd = cwd;
-        this.ROOT_ID = root_id;
-        this.ROOT_PASSWORD = root_pass;
+        this.port = port;  // 8000
+
+        this.ADMIN_PASSWORD = admin_pass;
         this.ADMIN_ID = admin_id;
 
-        log.debug("isConnected = {}, root.id = {}", isConnected, ROOT_ID);
-
-        try {
-            socket = new Socket(server, port);
-            is = socket.getInputStream();
-            os = socket.getOutputStream();
-        } catch (Exception e) {
-            log.error("UserAdminAgent 생성자 예외: {}", e.getMessage());
-        }
-
-        isConnected = connect();
+        log.debug("isConnected = {}, root.id = {}", isConnected, ADMIN_ID);
     }
 
     /**
@@ -69,76 +71,56 @@ public class UserAdminAgent {
     //   - true: addUser operation successful
     //   - false: addUser operation failed
     public boolean addUser(String userId, String password) {
-        boolean status = false;
-        byte[] messageBuffer = new byte[1024];
+        String url = baseUrl + "/users/" + userId;
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
 
-        log.debug("addUser() called");
-        if (!isConnected) {
-            return status;
-        }
+        String jsonBody = String.format("{\"password\": \"%s\"}", password);
+        HttpEntity<String> request = new HttpEntity<>(jsonBody, headers);
 
         try {
-            // 1: "adduser" command
-            String addUserCommand = "adduser " + userId + " " + password + EOL;
-            os.write(addUserCommand.getBytes());
-
-            // 2: response for "adduser" command
-            java.util.Arrays.fill(messageBuffer, (byte) 0);
-            //if (is.available() > 0) {
-            is.read(messageBuffer);
-            String recvMessage = new String(messageBuffer);
-            log.debug(recvMessage);
-            //}
-            // 3: 기존 메일사용자 여부 확인
-            if (recvMessage.contains("added")) {
-                status = true;
-            } else {
-                status = false;
-            }
-            // 4: 연결 종료
-            quit();
-            System.out.flush();  // for test
-            socket.close();
-        } catch (Exception ex) {
-            log.error("addUser 예외: {}", ex.getMessage());
-            status = false;
-        } finally {
-            // 5: 상태 반환
-            return status;
+            ResponseEntity<Void> response = restTemplate.exchange(
+                    url, HttpMethod.PUT, request, Void.class);
+            log.info("Response Status Code: {}", response.getStatusCode());
+            return response.getStatusCode() == HttpStatus.NO_CONTENT;
+        } catch (HttpClientErrorException e) {
+            log.error("HTTP error when adding user {}: {} - Body: {}",
+                    userId, e.getStatusCode(), e.getResponseBodyAsString());
+        } catch (Exception e) {
+            log.error("Unexpected error adding user {}: {}", userId, e.toString());
         }
-    }  // addUser()
+        return false;
+    }
 
     public List<String> getUserList() {
-        List<String> userList = new LinkedList<String>();
-        byte[] messageBuffer = new byte[1024];
-
-        log.info("root.id = {}, root.password = {}", ROOT_ID, ROOT_PASSWORD);
-
-        if (!isConnected) {
-            return userList;
-        }
-
+        String url = baseUrl + "/users";
         try {
-            // 1: "listusers" 명령 송신
-            String command = "listusers " + EOL;
-            os.write(command.getBytes());
+            // 응답을 List<Map<String, String>> 형태로 받기
+            ResponseEntity<List<Map<String, String>>> response = restTemplate.exchange(url, HttpMethod.GET, null, new ParameterizedTypeReference<List<Map<String, String>>>() {
+            });
+            List<Map<String, String>> body = response.getBody();
 
-            // 2: "listusers" 명령에 대한 응답 수신
-            java.util.Arrays.fill(messageBuffer, (byte) 0);
-            is.read(messageBuffer);
+            if (body == null) {
+                log.warn("응답 본문이 null입니다.");
+                return new LinkedList<>();
+            }
 
-            // 3: 응답 메시지 처리
-            String recvMessage = new String(messageBuffer);
-            log.debug("recvMessage = {}", recvMessage);
-            userList = parseUserList(recvMessage);
+            // "username" 키에 해당하는 값들을 리스트로 추출
+            List<String> users = new LinkedList<>();
+            for (Map<String, String> user : body) {
+                String username = user.get("username");
+                if (username != null && !username.equalsIgnoreCase("admin@admin.com")) {
+                    users.add(username);
+                }
+            }
 
-            quit();
-        } catch (Exception ex) {
-            log.error("getUserList(): 예외 = {}", ex.getMessage());
-        } finally {
-            return userList;
+            users.sort(String::compareTo);  // 알파벳 순으로 정렬
+            return users;
+        } catch (Exception e) {
+            log.error("Error fetching user list", e);
+            return new LinkedList<>();
         }
-    }  // getUserList()
+    }
 
     private List<String> parseUserList(String message) {
         List<String> userList = new LinkedList<String>();
@@ -167,42 +149,32 @@ public class UserAdminAgent {
     } // parseUserList()
 
     public boolean deleteUsers(String[] userList) {
-        byte[] messageBuffer = new byte[1024];
-        String command;
-        String recvMessage;
-        boolean status = false;
-
-        if (!isConnected) {
-            return status;
-        }
-
-        try {
-            for (String userId : userList) {
-                // 1: "deluser" 명령 송신
-                command = "deluser " + userId + EOL;
-                os.write(command.getBytes());
-                log.debug(command);
-
-                // 2: 응답 메시지 수신
-                java.util.Arrays.fill(messageBuffer, (byte) 0);
-                is.read(messageBuffer);
-
-                // 3: 응답 메시지 분석
-                recvMessage = new String(messageBuffer);
-                log.debug("recvMessage = {}", recvMessage);
-                if (recvMessage.contains("deleted")) {
-                    status = true;
-                }
+        boolean allSuccess = true;
+        for (String user : userList) {
+            String url = baseUrl + "/users/" + user;
+            try {
+                restTemplate.delete(url);
+                log.info("Deleted user: {}", user);
+            } catch (Exception e) {
+                log.error("Error deleting user {}: {}", user, e.getMessage());
+                allSuccess = false;
             }
-            quit();
-        } catch (Exception ex) {
-            log.error("deleteUsers(): 예외 = {}", ex.getMessage());
-        } finally {
-            return status;
         }
-    }  // deleteUsers()
+        return allSuccess;
+    }
 
-    public boolean verify(String userid) {
+    public boolean verify(String userId) {
+        String url = baseUrl + "/users/" + userId;
+        try {
+            restTemplate.getForEntity(url, Void.class);
+            return true; // 존재함
+        } catch (HttpClientErrorException.NotFound e) {
+            return false; // 존재하지 않음
+        } catch (Exception e) {
+            log.error("Error verifying user {}: {}", userId, e.getMessage());
+            return false;
+        }
+        /*
         boolean status = false;
         byte[] messageBuffer = new byte[1024];
 
@@ -225,54 +197,58 @@ public class UserAdminAgent {
             log.error("verify(): 예외 = {}", ex.getMessage());
         } finally {
             return status;
-        }
+        }*/
     }
 
-    private boolean connect() {
+    /*private boolean connect() {
         byte[] messageBuffer = new byte[1024];
         boolean returnVal = false;
         String sendMessage;
         String recvMessage;
 
-        log.info("connect() : root.id = {}, root.password = {}", ROOT_ID, ROOT_PASSWORD);
+        log.info("connect() : root.id = {}, root.password = {}", ROOT_ID, ADMIN_PASSWORD);
 
         // root 인증: id, passwd - default: root
         // 1: Login Id message 수신
+        
         try {
-            is.read(messageBuffer);
-            recvMessage = new String(messageBuffer);
+        log.debug("Step 1: 서버로부터 로그인 메시지 수신 대기");
+        is.read(messageBuffer);
+        recvMessage = new String(messageBuffer);
+            System.out.println("receive message " + recvMessage + "123");
+        log.debug("받은 메시지: {}", recvMessage.trim());
 
-            // 2: rootId 송신
-            sendMessage = ROOT_ID + EOL;
-            os.write(sendMessage.getBytes());
+        log.debug("Step 2: root ID 전송");
+        sendMessage = ROOT_ID + EOL;
+        os.write(sendMessage.getBytes());
 
-            // 3: Password message 수신
-            java.util.Arrays.fill(messageBuffer, (byte) 0);
-            is.read(messageBuffer);
-            //recvMessage = new String(messageBuffer);
+        log.debug("Step 3: 비밀번호 입력 메시지 수신 대기");
+        Arrays.fill(messageBuffer, (byte) 0);
+        is.read(messageBuffer);
 
-            // 4: rootPassword 송신
-            sendMessage = ROOT_PASSWORD + EOL;
-            os.write(sendMessage.getBytes());
+        log.debug("Step 4: root PASSWORD 전송");
+        sendMessage = ADMIN_PASSWORD + EOL;
+        os.write(sendMessage.getBytes());
 
-            // 5: welcome message 수신
-            java.util.Arrays.fill(messageBuffer, (byte) 0);
-            // if (is.available() > 0) {
-            is.read(messageBuffer);
-            recvMessage = new String(messageBuffer);
-
-            if (recvMessage.contains("Welcome")) {
-                returnVal = true;
-            } else {
-                returnVal = false;
-            }
+        log.debug("Step 5: Welcome 메시지 수신 대기");
+        Arrays.fill(messageBuffer, (byte) 0);
+        is.read(messageBuffer);
+        recvMessage = new String(messageBuffer);
+        log.debug("받은 메시지: {}", recvMessage.trim());
+        
+        if (recvMessage.contains("Welcome")) {
+        System.out.println("connect true");
+        returnVal = true;
+         } else {
+        System.out.println("connect false");
+         }
         } catch (Exception e) {
-            log.error("connect() 예외: {}", e.getMessage());
-        }
+        log.error("connect() 예외 발생", e);
+         }
+
 
         return returnVal;
-    }  // connect()
-
+    }  // connect()*/
     public boolean quit() {
         byte[] messageBuffer = new byte[1024];
         boolean status = false;
