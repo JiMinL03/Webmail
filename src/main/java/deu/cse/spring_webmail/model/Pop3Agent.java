@@ -14,6 +14,7 @@ import java.util.Properties;
 import jakarta.servlet.http.HttpServletRequest;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -122,7 +123,7 @@ public class Pop3Agent {
             folder.open(Folder.READ_ONLY);  // 3.3
 
             // 현재 수신한 메시지 모두 가져오기
-            messages = folder.getMessages(start, end);      // 3.4
+            messages = folder.getMessages(end, start);      // 3.4
             FetchProfile fp = new FetchProfile();
             // From, To, Cc, Bcc, ReplyTo, Subject & Date
             fp.add(FetchProfile.Item.ENVELOPE);
