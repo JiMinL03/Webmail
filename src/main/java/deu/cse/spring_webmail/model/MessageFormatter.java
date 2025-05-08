@@ -30,6 +30,8 @@ public class MessageFormatter {
     private String subject;
     @Getter
     private String body;
+    
+    final String BR = " <br>";
 
     public String getMessageTable(Message[] messages, String userid) {
         //StringBuilder buffer = new StringBuilder();
@@ -81,11 +83,11 @@ public class MessageFormatter {
         subject = parser.getSubject();
         body = parser.getBody();
 
-        buffer.append("보낸 사람: " + parser.getFromAddress() + " <br>");
-        buffer.append("받은 사람: " + parser.getToAddress() + " <br>");
-        buffer.append("Cc &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; : " + parser.getCcAddress() + " <br>");
-        buffer.append("보낸 날짜: " + parser.getSentDate() + " <br>");
-        buffer.append("제 &nbsp;&nbsp;&nbsp;  목: " + parser.getSubject() + " <br> <hr>");
+        buffer.append("보낸 사람: " + parser.getFromAddress() + BR);
+        buffer.append("받은 사람: " + parser.getToAddress() + BR);
+        buffer.append("Cc &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; : " + parser.getCcAddress() + BR);
+        buffer.append("보낸 날짜: " + parser.getSentDate() +BR);
+        buffer.append("제 &nbsp;&nbsp;&nbsp;  목: " + parser.getSubject() +BR+" <hr>");
 
         buffer.append(parser.getBody());
 

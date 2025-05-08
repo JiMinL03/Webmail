@@ -54,6 +54,10 @@ public class Pop3Agent {
     private String subject;
     @Getter
     private String body;
+    
+    private static final String MAILBOX_INBOX = "INBOX";
+    private static final String VALUE_FALSE = "false";
+    private static final String VALUE_TRUE = "true";
 
     public Pop3Agent(String host, String userid, String password) {
         this.host = host;
@@ -70,9 +74,7 @@ public class Pop3Agent {
         } catch (Exception ex) {
             log.error("Pop3Agent.validate() error : " + ex);
             status = false;  // for clarity
-        } finally {
-            return status;
-        }
+        } return status;
     }
 
     public boolean deleteMessage(int msgid, boolean really_delete) {
@@ -85,7 +87,7 @@ public class Pop3Agent {
         try {
             // Folder 설정
 //            Folder folder = store.getDefaultFolder();
-            Folder folder = store.getFolder("INBOX");
+            Folder folder = store.getFolder(MAILBOX_INBOX);
             folder.open(Folder.READ_WRITE);
 
             // Message에 DELETED flag 설정
@@ -100,9 +102,7 @@ public class Pop3Agent {
             status = true;
         } catch (Exception ex) {
             log.error("deleteMessage() error: {}", ex.getMessage());
-        } finally {
-            return status;
-        }
+        } return status;
     }
 
     /*
@@ -119,7 +119,7 @@ public class Pop3Agent {
 
         try {
             // 메일 폴더 열기
-            Folder folder = store.getFolder("INBOX");  // 3.2
+            Folder folder = store.getFolder(MAILBOX_INBOX);  // 3.2
             folder.open(Folder.READ_ONLY);  // 3.3
 
             // 현재 수신한 메시지 모두 가져오기
@@ -137,9 +137,7 @@ public class Pop3Agent {
         } catch (Exception ex) {
             log.error("Pop3Agent.getMessageList() : exception = {}", ex.getMessage());
             result = "Pop3Agent.getMessageList() : exception = " + ex.getMessage();
-        } finally {
-            return result;
-        }
+        } return result;
     }
 
     public int getMessageCount() { //페이징 기능 구현을 위한 전체 페이지 갯수 반혼
@@ -149,7 +147,7 @@ public class Pop3Agent {
         }
 
         try {
-            Folder folder = store.getFolder("INBOX");
+            Folder folder = store.getFolder(MAILBOX_INBOX);
             folder.open(Folder.READ_ONLY);
             int count = folder.getMessageCount();
 
@@ -172,7 +170,7 @@ public class Pop3Agent {
         }
 
         try {
-            Folder folder = store.getFolder("INBOX");
+            Folder folder = store.getFolder(MAILBOX_INBOX);
             folder.open(Folder.READ_ONLY);
 
             Message message = folder.getMessage(n);
@@ -189,9 +187,7 @@ public class Pop3Agent {
         } catch (Exception ex) {
             log.error("Pop3Agent.getMessageList() : exception = {}", ex);
             result = "Pop3Agent.getMessage() : exception = " + ex;
-        } finally {
-            return result;
-        }
+        } return result;
     }
 
     private boolean connectToStore() {
@@ -200,10 +196,10 @@ public class Pop3Agent {
         // https://jakarta.ee/specifications/mail/2.1/apidocs/jakarta.mail/jakarta/mail/package-summary.html
         props.setProperty("mail.pop3.host", host);
         props.setProperty("mail.pop3.user", userid);
-        props.setProperty("mail.pop3.apop.enable", "false");
-        props.setProperty("mail.pop3.disablecapa", "true");  // 200102 LJM - added cf. https://javaee.github.io/javamail/docs/api/com/sun/mail/pop3/package-summary.html
-        props.setProperty("mail.debug", "false");
-        props.setProperty("mail.pop3.debug", "false");
+        props.setProperty("mail.pop3.apop.enable", VALUE_FALSE);
+        props.setProperty("mail.pop3.disablecapa", VALUE_TRUE);  // 200102 LJM - added cf. https://javaee.github.io/javamail/docs/api/com/sun/mail/pop3/package-summary.html
+        props.setProperty("mail.debug", VALUE_FALSE);
+        props.setProperty("mail.pop3.debug", VALUE_FALSE);
 
         Session session = Session.getInstance(props);
         session.setDebug(false);
@@ -214,9 +210,7 @@ public class Pop3Agent {
             status = true;
         } catch (Exception ex) {
             log.error("connectToStore 예외: {}", ex.getMessage());
-        } finally {
-            return status;
-        }
+        } return status;
     }
 
 }
