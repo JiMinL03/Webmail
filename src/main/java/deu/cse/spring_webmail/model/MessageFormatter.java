@@ -18,48 +18,55 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 @RequiredArgsConstructor
 public class MessageFormatter {
-    @NonNull private String userid;  // 파일 임시 저장 디렉토리 생성에 필요
+
+    @NonNull
+    private String userid;  // 파일 임시 저장 디렉토리 생성에 필요
     private HttpServletRequest request = null;
-    
+
     // 220612 LJM - added to implement REPLY
-    @Getter private String sender;
-    @Getter private String subject;
-    @Getter private String body;
+    @Getter
+    private String sender;
+    @Getter
+    private String subject;
+    @Getter
+    private String body;
 
-
-    public String getMessageTable(Message[] messages) {
-        StringBuilder buffer = new StringBuilder();
-
+    public String getMessageTable(Message[] messages, String userid) {
+        //StringBuilder buffer = new StringBuilder();
+        StringBuilder receivedBuffer = new StringBuilder();
+        StringBuilder myselfBuffer = new StringBuilder();
         // 메시지 제목 보여주기
-        buffer.append("<table>");  // table start
-        buffer.append("<tr> "
-                + " <th> No. </td> "
-                + " <th> 보낸 사람 </td>"
-                + " <th> 제목 </td>     "
-                + " <th> 보낸 날짜 </td>   "
-                + " <th> 삭제 </td>   "
-                + " </tr>");
+        String tableHeader = "<table border='1'>"
+                + "<tr><th>No</th><th>보낸 사람</th><th>제목</th><th>날짜</th><th>삭제</th></tr>";
+
+        myselfBuffer.append("<h2>나에게 보낸 메일</h2>").append(tableHeader);
+        receivedBuffer.append("<h2>내가 받은 메일</h2>").append(tableHeader);
 
         for (int i = messages.length - 1; i >= 0; i--) {
             MessageParser parser = new MessageParser(messages[i], userid);
             parser.parse(false);  // envelope 정보만 필요
             // 메시지 헤더 포맷
             // 추출한 정보를 출력 포맷 사용하여 스트링으로 만들기
-            buffer.append("<tr> "
-                    + " <td id=no>" + (i + 1) + " </td> "
-                    + " <td id=sender>" + parser.getFromAddress() + "</td>"
-                    + " <td id=subject> "
-                    + " <a href=show_message?msgid=" + (i + 1) + " title=\"메일 보기\"> "
-                    + parser.getSubject() + "</a> </td>"
-                    + " <td id=date>" + parser.getSentDate() + "</td>"
-                    + " <td id=delete>"
-                    + "<a href=\"javascript:void(0);\" onclick=\"confirmDelete(" + (i + 1) + ")\"> 삭제 </a>"
-                    + "</td>"
-                    + " </tr>");
-        }
-        buffer.append("</table>");
+            String row = "<tr> "
+                    + "<td id=no>" + (i + 1) + "</td> "
+                    + "<td id=sender>" + parser.getFromAddress() + "</td> "
+                    + "<td id=subject><a href=show_message?msgid=" + (i + 1) + " title=\"메일 보기\">"
+                    + parser.getSubject() + "</a></td> "
+                    + "<td id=date>" + parser.getSentDate() + "</td> "
+                    + "<td id=delete><a href=\"javascript:void(0);\" onclick=\"confirmDelete(" + (i + 1) + ")\">삭제</a></td> "
+                    + "</tr>";
 
-        return buffer.toString();
+            if (userid.equals(parser.getFromAddress())) {
+                myselfBuffer.append(row);
+            } else {
+                receivedBuffer.append(row);
+            }
+        }
+        // 테이블 마무리
+        myselfBuffer.append("</table>");
+        receivedBuffer.append("</table>");
+
+        return receivedBuffer.toString() + "<br><br>" + myselfBuffer.toString();
 //        return "MessageFormatter 테이블 결과";
     }
 
@@ -69,7 +76,7 @@ public class MessageFormatter {
         // MessageParser parser = new MessageParser(message, userid);
         MessageParser parser = new MessageParser(message, userid, request);
         parser.parse(true);
-        
+
         sender = parser.getFromAddress();
         subject = parser.getSubject();
         body = parser.getBody();
@@ -92,7 +99,7 @@ public class MessageFormatter {
 
         return buffer.toString();
     }
-    
+
     public void setRequest(HttpServletRequest request) {
         this.request = request;
     }
