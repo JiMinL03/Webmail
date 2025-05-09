@@ -30,19 +30,21 @@ public class MessageFormatter {
     private String subject;
     @Getter
     private String body;
-    
+
     final String BR = " <br>";
 
     public String getMessageTable(Message[] messages, String userid) {
         //StringBuilder buffer = new StringBuilder();
         StringBuilder receivedBuffer = new StringBuilder();
         StringBuilder myselfBuffer = new StringBuilder();
+        StringBuilder sendBuffer = new StringBuilder();
         // 메시지 제목 보여주기
         String tableHeader = "<table border='1'>"
                 + "<tr><th>No</th><th>보낸 사람</th><th>제목</th><th>날짜</th><th>삭제</th></tr>";
 
-        myselfBuffer.append("<h2>나에게 보낸 메일</h2>").append(tableHeader);
+        myselfBuffer.append("<h2>내게 쓴 메일</h2>").append(tableHeader);
         receivedBuffer.append("<h2>내가 받은 메일</h2>").append(tableHeader);
+        sendBuffer.append("<h2>내가 보낸 메일</h2>").append(tableHeader);
 
         for (int i = messages.length - 1; i >= 0; i--) {
             MessageParser parser = new MessageParser(messages[i], userid);
@@ -57,18 +59,21 @@ public class MessageFormatter {
                     + "<td id=date>" + parser.getSentDate() + "</td> "
                     + "<td id=delete><a href=\"javascript:void(0);\" onclick=\"confirmDelete(" + (i + 1) + ")\">삭제</a></td> "
                     + "</tr>";
-
-            if (userid.equals(parser.getFromAddress())) {
-                myselfBuffer.append(row);
-            } else {
-                receivedBuffer.append(row);
+            
+            if (userid.equals(parser.getFromAddress()) && userid.equals(parser.getToAddress())) {
+                myselfBuffer.append(row);  // "Sent to Myself" (myself)
+            } else if (userid.equals(parser.getFromAddress())) {
+                sendBuffer.append(row);    // "Sent Mail"
+            } else if (userid.equals(parser.getToAddress())) {
+                receivedBuffer.append(row);  // "Received Mail"
             }
+
         }
         // 테이블 마무리
         myselfBuffer.append("</table>");
         receivedBuffer.append("</table>");
-
-        return receivedBuffer.toString() + "<br><br>" + myselfBuffer.toString();
+        sendBuffer.append("</table>");
+        return receivedBuffer.toString() + "<br><br>" + sendBuffer.toString() + "<br><br>" + myselfBuffer.toString();
 //        return "MessageFormatter 테이블 결과";
     }
 
@@ -86,8 +91,8 @@ public class MessageFormatter {
         buffer.append("보낸 사람: " + parser.getFromAddress() + BR);
         buffer.append("받은 사람: " + parser.getToAddress() + BR);
         buffer.append("Cc &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; : " + parser.getCcAddress() + BR);
-        buffer.append("보낸 날짜: " + parser.getSentDate() +BR);
-        buffer.append("제 &nbsp;&nbsp;&nbsp;  목: " + parser.getSubject() +BR+" <hr>");
+        buffer.append("보낸 날짜: " + parser.getSentDate() + BR);
+        buffer.append("제 &nbsp;&nbsp;&nbsp;  목: " + parser.getSubject() + BR + " <hr>");
 
         buffer.append(parser.getBody());
 
