@@ -47,39 +47,32 @@
                     <hr/>
                 </div>
             </c:forEach>
-
-            <!-- 페이징 링크 -->
-            <div>
-                <!-- 이전 페이지 -->
-                <c:if test="${currentPage > 1}">
-                    <a href="?page=${currentPage - 1}">이전</a>
-                </c:if>
-
-                <!-- 페이지 번호 -->
-                <c:forEach begin="1" end="${totalPages}" var="i">
-                    <c:choose>
-                        <c:when test="${i == currentPage}">
-                            <strong>[${i}]</strong>
-                        </c:when>
-                        <c:otherwise>
-                            <a href="?page=${i}">[${i}]</a>
-                        </c:otherwise>
-                    </c:choose>
-                </c:forEach>
-
-                <!-- 다음 페이지 -->
-                <c:if test="${currentPage < totalPages}">
-                    <a href="?page=${currentPage + 1}">다음</a>
-                </c:if>
-            </div>
-            
-            <c:forEach var="oldMessage" items="${oldMessageList}">
-                <div>
-                    <p>${oldMessage}</p>
-                    <hr/>
-                </div>
-            </c:forEach>
         </div>
+
+        <div class="pagination">
+            <!-- 이전 페이지 -->
+            <c:if test="${currentPage > 1}">
+                <a href="?page=${currentPage - 1}">이전</a>
+            </c:if>
+
+            <!-- 페이지 번호 -->
+            <c:forEach begin="1" end="${totalPages}" var="i">
+                <c:choose>
+                    <c:when test="${i == currentPage}">
+                        <strong>[${i}]</strong> <!-- 현재 페이지는 강조 -->
+                    </c:when>
+                    <c:otherwise>
+                        <a href="?page=${i}" class="page-link">[${i}]</a> <!-- 페이지 링크 -->
+                    </c:otherwise>
+                </c:choose>
+            </c:forEach>
+
+            <!-- 다음 페이지 -->
+            <c:if test="${currentPage < totalPages}">
+                <a href="?page=${currentPage + 1}">다음</a>
+            </c:if>
+        </div>
+
 
         <script type="text/javascript">
             function confirmDelete(msgId) {

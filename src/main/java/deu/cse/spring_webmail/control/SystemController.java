@@ -134,31 +134,7 @@ public class SystemController {
 
         return status;
     }
-
-    @GetMapping("/main_menu")
-    public String mainMenu(@RequestParam(defaultValue = "1") int page, Model model, HttpSession session) {
-        Pop3Agent pop3 = new Pop3Agent();
-        pop3.setHost((String) session.getAttribute("host"));
-        pop3.setUserid((String) session.getAttribute(SESSION_USERID));
-        pop3.setPassword((String) session.getAttribute("password"));
-
-        int pageSize = 5;
-        int totalCount = pop3.getMessageCount();
-        int totalPages = (int) Math.ceil((double) totalCount / pageSize);
-        
-        int start = totalCount - (page - 1) * pageSize;
-        int end = Math.max(start - pageSize + 1, 1);
-
-        String messageList = pop3.getMessageList(start, end);
-        String oldMessageList = pop3.getOldMessage();
-        model.addAttribute("messageList", messageList);
-        model.addAttribute("currentPage", page);
-        model.addAttribute("totalPages", totalPages);
-        model.addAttribute("totalCount", totalCount);
-        model.addAttribute("oldMessageList", oldMessageList);
-        return "main_menu";
-    }
-
+    
      @GetMapping("/admin_menu")
     public String adminMenu(Model model) {
         String userid = (String) session.getAttribute(SESSION_USERID);

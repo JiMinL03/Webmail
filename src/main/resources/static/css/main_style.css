@@ -117,3 +117,57 @@ a:hover {
     padding: 10px;
     clear: left;
 }
+
+/* 페이지 네비게이션 컨테이너 */
+.pagination {
+    display: flex;
+    justify-content: center; /* 중앙 정렬 */
+    align-items: center;
+    margin-top: 20px;
+}
+
+/* 이전/다음 페이지 버튼 */
+.pagination a,
+.pagination strong {
+    text-decoration: none; /* 링크 밑줄 제거 */
+    padding: 8px 15px; /* 여백 */
+    margin: 0 5px; /* 간격 */
+    border-radius: 5px; /* 둥근 모서리 */
+    font-size: 16px;
+    cursor: pointer;
+}
+
+/* 이전/다음 페이지 버튼 기본 스타일 */
+.pagination a {
+    background-color: #007bff;
+    color: white;
+    transition: background-color 0.3s ease;
+}
+
+/* 이전/다음 페이지 버튼에 마우스를 올렸을 때 */
+.pagination a:hover {
+    background-color: #0056b3;
+}
+
+/* 현재 페이지 강조 스타일 */
+.pagination strong {
+    background-color: #28a745;
+    color: white;
+}
+
+/* 페이지 번호 기본 스타일 */
+.pagination a.page-link {
+    background-color: #f8f9fa;
+    color: #007bff;
+}
+
+/* 페이지 번호에 마우스를 올렸을 때 */
+.pagination a.page-link:hover {
+    background-color: #e2e6ea;
+}
+
+/* 페이지 번호 클릭한 상태 */
+.pagination a.page-link.active {
+    background-color: #28a745;
+    color: white;
+}

@@ -9,6 +9,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.Locale;
 import lombok.Getter;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
@@ -36,47 +37,99 @@ public class MessageFormatter {
 
     final String BR = " <br>";
 
-    public String getMessageTable(Message[] messages, String userid) {
-        //StringBuilder buffer = new StringBuilder();
-        StringBuilder receivedBuffer = new StringBuilder();
-        StringBuilder myselfBuffer = new StringBuilder();
-        StringBuilder sendBuffer = new StringBuilder();
-        // 메시지 제목 보여주기
-        String tableHeader = "<table border='1'>"
-                + "<tr><th>No</th><th>보낸 사람</th><th>제목</th><th>날짜</th><th>삭제</th></tr>";
+    public enum MailType {
+        SENT_TO_MYSELF, // 내게 쓴 메일
+        SENT_MAIL, // 내가 보낸 메일
+        RECEIVED_MAIL, // 내가 받은 메일
+        DRAFT, // 임시보관함
+        ALL_MAIL
+    }
 
-        myselfBuffer.append("<h2>내게 쓴 메일</h2>").append(tableHeader);
-        receivedBuffer.append("<h2>내가 받은 메일</h2>").append(tableHeader);
-        sendBuffer.append("<h2>내가 보낸 메일</h2>").append(tableHeader);
+    public String getMessageTable(Message[] messages, String userid, String tableTitle, MailType mailType) {
+        StringBuilder buffer = new StringBuilder();
+        String tableHeader = "<table border='1'>"
+                + "<tr><th>보낸 사람</th><th>제목</th><th>날짜</th><th>삭제</th></tr>";
+
+        buffer.append("<h2>").append(tableTitle).append("</h2>").append(tableHeader);
 
         for (int i = messages.length - 1; i >= 0; i--) {
             MessageParser parser = new MessageParser(messages[i], userid);
             parser.parse(false);  // envelope 정보만 필요
-            // 메시지 헤더 포맷
-            // 추출한 정보를 출력 포맷 사용하여 스트링으로 만들기
-            String row = "<tr> "
-                    + "<td id=no>" + (i + 1) + "</td> "
-                    + "<td id=sender>" + parser.getFromAddress() + "</td> "
-                    + "<td id=subject><a href=show_message?msgid=" + (i + 1) + " title=\"메일 보기\">"
-                    + parser.getSubject() + "</a></td> "
-                    + "<td id=date>" + parser.getSentDate() + "</td> "
-                    + "<td id=delete><a href=\"javascript:void(0);\" onclick=\"confirmDelete(" + (i + 1) + ")\">삭제</a></td> "
-                    + "</tr>";
 
-            if (userid.equals(parser.getFromAddress()) && userid.equals(parser.getToAddress())) {
-                myselfBuffer.append(row);  // "Sent to Myself" (myself)
-            } else if (userid.equals(parser.getFromAddress())) {
-                sendBuffer.append(row);    // "Sent Mail"
-            } else if (userid.equals(parser.getToAddress())) {
-                receivedBuffer.append(row);  // "Received Mail"
+            boolean shouldInclude = false;
+
+            // 메일함 타입에 따른 필터링
+            switch (mailType) {
+                case SENT_TO_MYSELF:
+                    if (userid.equals(parser.getFromAddress()) && userid.equals(parser.getToAddress())) {
+                        shouldInclude = true;  // 내게 쓴 메일
+                    }
+                    break;
+                case SENT_MAIL:
+                    if (userid.equals(parser.getFromAddress()) && !userid.equals(parser.getToAddress())) {
+                        shouldInclude = true;  // 내가 보낸 메일
+                    }
+                    break;
+                case RECEIVED_MAIL:
+                    if (userid.equals(parser.getToAddress()) && !userid.equals(parser.getFromAddress())) {
+                        shouldInclude = true;  // 내가 받은 메일
+                    }
+                    break;
+                case DRAFT:
+                    if (isThirtyDaysOld(parser.getSentDate())) {
+                        shouldInclude = true;  // 임시보관함
+                    }
+                    break;
+                case ALL_MAIL:
+                    shouldInclude = true;  // 전체 메일은 조건 없이 모든 메일을 포함
+                    break;
+                default:
+                    shouldInclude = true;
+                    break;
+            }
+
+            if (shouldInclude) {
+                String row = createRow(i, parser);
+                buffer.append(row);
             }
         }
-        // 테이블 마무리
-        myselfBuffer.append("</table>");
-        receivedBuffer.append("</table>");
-        sendBuffer.append("</table>");
-        return receivedBuffer.toString() + "<br><br>" + sendBuffer.toString() + "<br><br>" + myselfBuffer.toString();
-//        return "MessageFormatter 테이블 결과";
+
+        buffer.append("</table>");
+        return buffer.toString();
+    }
+
+    private String createRow(int index, MessageParser parser) {
+        return "<tr> "
+                + "<td id=sender>" + parser.getFromAddress() + "</td> "
+                + "<td id=subject><a href=show_message?msgid=" + (index + 1) + " title=\"메일 보기\">"
+                + parser.getSubject() + "</a></td> "
+                + "<td id=date>" + parser.getSentDate() + "</td> "
+                + "<td id=delete><a href=\"javascript:void(0);\" onclick=\"confirmDelete(" + (index + 1) + ")\">삭제</a></td> "
+                + "</tr>";
+    }
+
+    public String getAllMailMessages(Message[] messages, String userid) {
+        return getMessageTable(messages, userid, "전체 메일", MailType.ALL_MAIL);
+    }
+
+    // 내가 보낸 메일
+    public String getSentMailMessages(Message[] messages, String userid) {
+        return getMessageTable(messages, userid, "내가 보낸 메일", MailType.SENT_MAIL);
+    }
+
+// 내게 쓴 메일
+    public String getSentToMyselfMessages(Message[] messages, String userid) {
+        return getMessageTable(messages, userid, "내게 쓴 메일", MailType.SENT_TO_MYSELF);
+    }
+
+// 내가 받은 메일
+    public String getReceivedMessages(Message[] messages, String userid) {
+        return getMessageTable(messages, userid, "내가 받은 메일", MailType.RECEIVED_MAIL);
+    }
+
+// 임시보관함
+    public String getDraftMessages(Message[] messages, String userid) {
+        return getMessageTable(messages, userid, "임시보관함", MailType.DRAFT);
     }
 
     public String getMessage(Message message) {
@@ -117,7 +170,10 @@ public class MessageFormatter {
         Date d1 = new Date(); // 현재 날짜
 
         // 날짜 형식에 맞는 SimpleDateFormat 객체 생성
-        SimpleDateFormat sdf = new SimpleDateFormat("EEE MMM dd HH:mm:ss "); // 날짜 형식에 맞게 지정
+        SimpleDateFormat sdf = new SimpleDateFormat("EEE MMM dd HH:mm:ss", Locale.ENGLISH);
+
+        // 입력 날짜에서 불필요한 공백을 제거
+        date = date.replaceAll("\\s+", " ").trim();
 
         try {
             // 날짜 문자열을 Date 객체로 변환
@@ -140,34 +196,5 @@ public class MessageFormatter {
             e.printStackTrace();
             return false;
         }
-    }
-    
-    public String oldMessageTable(Message[] messages, String userid){
-        StringBuilder oldMessageBuffer = new StringBuilder();
-        // 메시지 제목 보여주기
-        String tableHeader = "<table border='1'>"
-                + "<tr><th>No</th><th>보낸 사람</th><th>제목</th><th>날짜</th><th>삭제</th></tr>";
-
-        oldMessageBuffer.append("<h2>임시보관함</h2>").append(tableHeader);
-
-        for (int i = messages.length - 1; i >= 0; i--) {
-            MessageParser parser = new MessageParser(messages[i], userid);
-            parser.parse(false); 
-            String row = "<tr> "
-                    + "<td id=no>" + (i + 1) + "</td> "
-                    + "<td id=sender>" + parser.getFromAddress() + "</td> "
-                    + "<td id=subject><a href=show_message?msgid=" + (i + 1) + " title=\"메일 보기\">"
-                    + parser.getSubject() + "</a></td> "
-                    + "<td id=date>" + parser.getSentDate() + "</td> "
-                    + "<td id=delete><a href=\"javascript:void(0);\" onclick=\"confirmDelete(" + (i + 1) + ")\">삭제</a></td> "
-                    + "</tr>";
-
-            if (isThirtyDaysOld(parser.getSentDate())) {
-                oldMessageBuffer.append(row);  // "Sent to Myself" (myself)
-            }
-        }
-        // 테이블 마무리
-        oldMessageBuffer.append("</table>");
-        return oldMessageBuffer.toString();
     }
 }
