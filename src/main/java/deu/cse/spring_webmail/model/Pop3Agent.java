@@ -212,5 +212,36 @@ public class Pop3Agent {
             log.error("connectToStore 예외: {}", ex.getMessage());
         } return status;
     }
+    
+    public String getOldMessage() {
+        String result = "";
+        Message[] messages = null;
 
+        if (!connectToStore()) {  // 3.1
+            log.error("POP3 connection failed!");
+            return "POP3 연결이 되지 않아 메일 목록을 볼 수 없습니다.";
+        }
+
+        try {
+            // 메일 폴더 열기
+            Folder folder = store.getFolder(MAILBOX_INBOX);  // 3.2
+            folder.open(Folder.READ_ONLY);  // 3.3
+
+            // 현재 수신한 메시지 모두 가져오기
+            messages = folder.getMessages();      // 3.4
+            FetchProfile fp = new FetchProfile();
+            // From, To, Cc, Bcc, ReplyTo, Subject & Date
+            fp.add(FetchProfile.Item.ENVELOPE);
+            folder.fetch(messages, fp);
+
+            MessageFormatter formatter = new MessageFormatter(userid);  //3.5
+            result = formatter.oldMessageTable(messages, userid);   // 3.6
+
+            folder.close(true);  // 3.7
+            store.close();       // 3.8
+        } catch (Exception ex) {
+            log.error("Pop3Agent.getMessageList() : exception = {}", ex.getMessage());
+            result = "Pop3Agent.getMessageList() : exception = " + ex.getMessage();
+        } return result;
+    }
 }
