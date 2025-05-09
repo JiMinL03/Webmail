@@ -73,9 +73,9 @@ public class UserAdminAgent {
     public boolean addUser(String userId, String password) {
         
         
-=======
-        String url = baseUrl + "/users/" + userId;
->>>>>>> Stashed changes
+
+        String url = baseUrl + "/" + userId;
+
         
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
