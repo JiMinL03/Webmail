@@ -143,13 +143,14 @@ public class SystemController {
         
         int start = totalCount - (page - 1) * pageSize;
         int end = Math.max(start - pageSize + 1, 1);
-         
-        System.out.println("userId: "+ session.getAttribute("userid"));
 
         String messageList = pop3.getMessageList(start, end);
+        String oldMessageList = pop3.getOldMessage();
         model.addAttribute("messageList", messageList);
         model.addAttribute("currentPage", page);
         model.addAttribute("totalPages", totalPages);
+        model.addAttribute("totalCount", totalCount);
+        model.addAttribute("oldMessageList", oldMessageList);
         return "main_menu";
     }
 

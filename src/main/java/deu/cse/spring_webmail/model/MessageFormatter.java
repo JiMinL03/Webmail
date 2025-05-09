@@ -6,6 +6,9 @@ package deu.cse.spring_webmail.model;
 
 import jakarta.mail.Message;
 import jakarta.servlet.http.HttpServletRequest;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import lombok.Getter;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
@@ -59,7 +62,7 @@ public class MessageFormatter {
                     + "<td id=date>" + parser.getSentDate() + "</td> "
                     + "<td id=delete><a href=\"javascript:void(0);\" onclick=\"confirmDelete(" + (i + 1) + ")\">삭제</a></td> "
                     + "</tr>";
-            
+
             if (userid.equals(parser.getFromAddress()) && userid.equals(parser.getToAddress())) {
                 myselfBuffer.append(row);  // "Sent to Myself" (myself)
             } else if (userid.equals(parser.getFromAddress())) {
@@ -67,7 +70,6 @@ public class MessageFormatter {
             } else if (userid.equals(parser.getToAddress())) {
                 receivedBuffer.append(row);  // "Received Mail"
             }
-
         }
         // 테이블 마무리
         myselfBuffer.append("</table>");
@@ -109,5 +111,63 @@ public class MessageFormatter {
 
     public void setRequest(HttpServletRequest request) {
         this.request = request;
+    }
+
+    public boolean isThirtyDaysOld(String date) {
+        Date d1 = new Date(); // 현재 날짜
+
+        // 날짜 형식에 맞는 SimpleDateFormat 객체 생성
+        SimpleDateFormat sdf = new SimpleDateFormat("EEE MMM dd HH:mm:ss "); // 날짜 형식에 맞게 지정
+
+        try {
+            // 날짜 문자열을 Date 객체로 변환
+            Date inputDate = sdf.parse(date);
+
+            // Date 객체의 밀리초 값
+            long inputDateMillis = inputDate.getTime();
+
+            // 30일을 밀리초로 계산
+            long thirtyDaysInMillis = 30L * 24 * 60 * 60 * 1000; // 30일을 밀리초로 변환
+
+            // 현재 날짜와 입력된 날짜의 차이를 계산
+            long differenceInMillis = Math.abs(d1.getTime() - inputDateMillis);
+
+            // 차이가 정확히 30일이면 true, 아니면 false
+            return differenceInMillis == thirtyDaysInMillis;
+
+        } catch (ParseException e) {
+            // 날짜 형식이 맞지 않으면 예외 처리
+            e.printStackTrace();
+            return false;
+        }
+    }
+    
+    public String oldMessageTable(Message[] messages, String userid){
+        StringBuilder oldMessageBuffer = new StringBuilder();
+        // 메시지 제목 보여주기
+        String tableHeader = "<table border='1'>"
+                + "<tr><th>No</th><th>보낸 사람</th><th>제목</th><th>날짜</th><th>삭제</th></tr>";
+
+        oldMessageBuffer.append("<h2>임시보관함</h2>").append(tableHeader);
+
+        for (int i = messages.length - 1; i >= 0; i--) {
+            MessageParser parser = new MessageParser(messages[i], userid);
+            parser.parse(false); 
+            String row = "<tr> "
+                    + "<td id=no>" + (i + 1) + "</td> "
+                    + "<td id=sender>" + parser.getFromAddress() + "</td> "
+                    + "<td id=subject><a href=show_message?msgid=" + (i + 1) + " title=\"메일 보기\">"
+                    + parser.getSubject() + "</a></td> "
+                    + "<td id=date>" + parser.getSentDate() + "</td> "
+                    + "<td id=delete><a href=\"javascript:void(0);\" onclick=\"confirmDelete(" + (i + 1) + ")\">삭제</a></td> "
+                    + "</tr>";
+
+            if (isThirtyDaysOld(parser.getSentDate())) {
+                oldMessageBuffer.append(row);  // "Sent to Myself" (myself)
+            }
+        }
+        // 테이블 마무리
+        oldMessageBuffer.append("</table>");
+        return oldMessageBuffer.toString();
     }
 }

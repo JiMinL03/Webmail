@@ -72,6 +72,13 @@
                     <a href="?page=${currentPage + 1}">다음</a>
                 </c:if>
             </div>
+            
+            <c:forEach var="oldMessage" items="${oldMessageList}">
+                <div>
+                    <p>${oldMessage}</p>
+                    <hr/>
+                </div>
+            </c:forEach>
         </div>
 
         <script type="text/javascript">
