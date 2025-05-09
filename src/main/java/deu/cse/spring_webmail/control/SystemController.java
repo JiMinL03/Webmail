@@ -48,13 +48,16 @@ public class SystemController {
     private HttpServletRequest request;
 
     @Value("${admin.password}")
-    private String ADMIN_PASSWORD;//1234
+    private String ADMIN_PASSWORD;
     @Value("${admin.id}")
-    private String ADMINISTRATOR;  //  = "admin@admin.com";
+    private String ADMINISTRATOR;
     @Value("${james.control.port}")
     private Integer JAMES_CONTROL_PORT;//8000
     @Value("${james.host}")
     private String JAMES_HOST;//127.0.0.1
+    
+    private static final String REDIRECT_ADMIN_MENU = "redirect:/admin_menu";
+    private static final String SESSION_USERID = "userid";
 
     @GetMapping("/")
     public String index() {
@@ -71,8 +74,9 @@ public class SystemController {
         log.debug("로그인 처리: menu = {}", menu);
         switch (menu) { 
             case CommandType.LOGIN: // 로그인 요청
+                
                 String host = (String) request.getSession().getAttribute("host");
-                String userid = request.getParameter("userid");
+                String userid = request.getParameter(SESSION_USERID);
                 String password = request.getParameter("passwd");
                 
                 // Pop3Agent 모델 클래스를 이용해서 로그인 정보가 유효한지 확인하라
@@ -80,25 +84,26 @@ public class SystemController {
 
                 Pop3Agent pop3Agent = new Pop3Agent(host, userid, password);
                 boolean isLoginSuccess = pop3Agent.validate();
-
+                
                 // Now call the correct page according to its validation result.
-                if (isLoginSuccess) {
+                if (isLoginSuccess) {                 
                     if (isAdmin(userid)) {
                         // HttpSession 객체에 userid를 등록해 둔다.
-                        session.setAttribute("userid", userid);
+                        session.setAttribute(SESSION_USERID, userid);
                         attrs.addFlashAttribute("msg", "관리자 로그인이 맞습니까?"); // [변경 부분]
                         // response.sendRedirect("admin_menu.jsp");
-                        url = "redirect:/admin_menu"; // admin_menu.jsp 이동
-                    } else {
+                        url = REDIRECT_ADMIN_MENU; // admin_menu.jsp 이동
+                    }
+                    else{
                         // HttpSession 객체에 userid와 password를 등록해 둔다.
-                        session.setAttribute("userid", userid);
+                        session.setAttribute(SESSION_USERID, userid);
                         session.setAttribute("password", password);
                         // response.sendRedirect("main_menu.jsp");
                         attrs.addFlashAttribute("msg", "사용자 로그인이 맞습니까?"); // [변경 부분]
                         url = "redirect:/main_menu";  // URL이 http://localhost:8080/webmail/main_menu 이와 같이 됨. // main_menu.jsp로 이동
                         // url = "/main_menu";  // URL이 http://localhost:8080/webmail/login.do?menu=91 이와 같이 되어 안 좋음
-                    }
-                } else {
+                    
+                }} else {
                     // RequestDispatcher view = request.getRequestDispatcher("login_fail.jsp");
                     // view.forward(request, response);
                     url = "redirect:/login_fail";
@@ -134,7 +139,7 @@ public class SystemController {
     public String mainMenu(@RequestParam(defaultValue = "1") int page, Model model, HttpSession session) {
         Pop3Agent pop3 = new Pop3Agent();
         pop3.setHost((String) session.getAttribute("host"));
-        pop3.setUserid((String) session.getAttribute("userid"));
+        pop3.setUserid((String) session.getAttribute(SESSION_USERID));
         pop3.setPassword((String) session.getAttribute("password"));
 
         int pageSize = 5;
@@ -156,7 +161,7 @@ public class SystemController {
 
      @GetMapping("/admin_menu")
     public String adminMenu(Model model) {
-        String userid = (String) session.getAttribute("userid");
+        String userid = (String) session.getAttribute(SESSION_USERID);
 
         if (userid == null || userid.isEmpty()) {
             log.warn("비로그인 상태로 admin_menu 접근 시도");
@@ -196,7 +201,7 @@ public class SystemController {
             log.error("add_user.do: 시스템 접속에 실패했습니다. 예외 = {}", ex.getMessage());
         }
 
-        return "redirect:/admin_menu";
+        return REDIRECT_ADMIN_MENU;
     }
 
     @GetMapping("/delete_user")
@@ -217,7 +222,7 @@ public class SystemController {
         log.debug("delete_user.do: selectedUser = {}", List.of(selectedUsers));
 
         try {
-            String cwd = ctx.getRealPath(".");
+            
             UserAdminAgent agent = new UserAdminAgent(JAMES_HOST, JAMES_CONTROL_PORT,
                     ADMIN_PASSWORD, ADMINISTRATOR);
             agent.deleteUsers(selectedUsers);  // 수정!!!
@@ -225,7 +230,7 @@ public class SystemController {
             log.error("delete_user.do : 예외 = {}", ex);
         }
 
-        return "redirect:/admin_menu";
+        return REDIRECT_ADMIN_MENU;
     }
 
     private List<String> getUserList() {

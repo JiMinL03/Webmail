@@ -43,7 +43,7 @@ public class UserAdminAgent {
     // private final String EOL = "\n";
     private final String EOL = "\r\n";
 
-    private final String baseUrl = "http://localhost:8000";
+    private final String baseUrl = "http://localhost:8000/users";
 
     public UserAdminAgent() {
     }
@@ -79,7 +79,7 @@ public class UserAdminAgent {
             userId=userId+"@user.com";
         }
         
-        String url = baseUrl + "/users/" + userId;
+        String url = getBaseUrl(true) + userId;
         
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
@@ -102,7 +102,7 @@ public class UserAdminAgent {
     }
 
     public List<String> getUserList() {
-        String url = baseUrl + "/users";
+        String url = getBaseUrl(false);
         try {
             // 응답을 List<Map<String, String>> 형태로 받기
             ResponseEntity<List<Map<String, String>>> response = restTemplate.exchange(url, HttpMethod.GET, null, new ParameterizedTypeReference<List<Map<String, String>>>() {
@@ -160,7 +160,7 @@ public class UserAdminAgent {
     public boolean deleteUsers(String[] userList) {
         boolean allSuccess = true;
         for (String user : userList) {
-            String url = baseUrl + "/users/" + user;
+            String url = getBaseUrl(true) + user;
             try {
                 restTemplate.delete(url);
                 log.info("Deleted user: {}", user);
@@ -173,7 +173,7 @@ public class UserAdminAgent {
     }
 
     public boolean verify(String userId) {
-        String url = baseUrl + "/users/" + userId;
+        String url = getBaseUrl(true) +  userId;
         try {
             restTemplate.getForEntity(url, Void.class);
             return true; // 존재함
@@ -279,8 +279,12 @@ public class UserAdminAgent {
             }
         } catch (IOException ex) {
             log.error("quit() 예외: {}", ex);
-        } finally {
+        } 
             return status;
-        }
+        
     }
+    
+    private String getBaseUrl(boolean withSlash) {
+    return withSlash ? baseUrl + "/" : baseUrl;
+}
 }
