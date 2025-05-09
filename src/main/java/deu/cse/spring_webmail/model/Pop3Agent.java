@@ -54,10 +54,18 @@ public class Pop3Agent {
     private String subject;
     @Getter
     private String body;
-    
+
     private static final String MAILBOX_INBOX = "INBOX";
     private static final String VALUE_FALSE = "false";
     private static final String VALUE_TRUE = "true";
+
+    public enum MailType {
+        SENT_TO_MYSELF, // 내게 쓴 메일
+        SENT_MAIL, // 내가 보낸 메일
+        RECEIVED_MAIL, // 내가 받은 메일
+        DRAFT, // 임시보관함
+        ALL_MAIL
+    }
 
     public Pop3Agent(String host, String userid, String password) {
         this.host = host;
@@ -74,7 +82,8 @@ public class Pop3Agent {
         } catch (Exception ex) {
             log.error("Pop3Agent.validate() error : " + ex);
             status = false;  // for clarity
-        } return status;
+        }
+        return status;
     }
 
     public boolean deleteMessage(int msgid, boolean really_delete) {
@@ -102,44 +111,13 @@ public class Pop3Agent {
             status = true;
         } catch (Exception ex) {
             log.error("deleteMessage() error: {}", ex.getMessage());
-        } return status;
+        }
+        return status;
     }
 
     /*
      * 페이지 단위로 메일 목록을 보여주어야 함.
      */
-    public String getMessageList(int start, int end) {
-        String result = "";
-        Message[] messages = null;
-
-        if (!connectToStore()) {  // 3.1
-            log.error("POP3 connection failed!");
-            return "POP3 연결이 되지 않아 메일 목록을 볼 수 없습니다.";
-        }
-
-        try {
-            // 메일 폴더 열기
-            Folder folder = store.getFolder(MAILBOX_INBOX);  // 3.2
-            folder.open(Folder.READ_ONLY);  // 3.3
-
-            // 현재 수신한 메시지 모두 가져오기
-            messages = folder.getMessages(end, start);      // 3.4
-            FetchProfile fp = new FetchProfile();
-            // From, To, Cc, Bcc, ReplyTo, Subject & Date
-            fp.add(FetchProfile.Item.ENVELOPE);
-            folder.fetch(messages, fp);
-
-            MessageFormatter formatter = new MessageFormatter(userid);  //3.5
-            result = formatter.getMessageTable(messages, userid);   // 3.6
-
-            folder.close(true);  // 3.7
-            store.close();       // 3.8
-        } catch (Exception ex) {
-            log.error("Pop3Agent.getMessageList() : exception = {}", ex.getMessage());
-            result = "Pop3Agent.getMessageList() : exception = " + ex.getMessage();
-        } return result;
-    }
-
     public int getMessageCount() { //페이징 기능 구현을 위한 전체 페이지 갯수 반혼
         if (!connectToStore()) {
             log.error("POP3 connection failed!");
@@ -187,7 +165,8 @@ public class Pop3Agent {
         } catch (Exception ex) {
             log.error("Pop3Agent.getMessageList() : exception = {}", ex);
             result = "Pop3Agent.getMessage() : exception = " + ex;
-        } return result;
+        }
+        return result;
     }
 
     private boolean connectToStore() {
@@ -210,38 +189,79 @@ public class Pop3Agent {
             status = true;
         } catch (Exception ex) {
             log.error("connectToStore 예외: {}", ex.getMessage());
-        } return status;
+        }
+        return status;
     }
-    
-    public String getOldMessage() {
+
+    // 공통된 메서드로 메시지를 가져오는 로직 처리
+    private String getMessages(String mailboxType, MessageFormatter.MailType mailType, int start, int end) {
         String result = "";
         Message[] messages = null;
 
-        if (!connectToStore()) {  // 3.1
+        if (!connectToStore()) {
             log.error("POP3 connection failed!");
             return "POP3 연결이 되지 않아 메일 목록을 볼 수 없습니다.";
         }
 
         try {
-            // 메일 폴더 열기
-            Folder folder = store.getFolder(MAILBOX_INBOX);  // 3.2
-            folder.open(Folder.READ_ONLY);  // 3.3
+            Folder folder = store.getFolder(mailboxType);  // mailBoxType에 따라 다른 메일함을 열 수 있음
+            folder.open(Folder.READ_ONLY); 
 
-            // 현재 수신한 메시지 모두 가져오기
-            messages = folder.getMessages();      // 3.4
+            messages = folder.getMessages(end,  start);
             FetchProfile fp = new FetchProfile();
-            // From, To, Cc, Bcc, ReplyTo, Subject & Date
             fp.add(FetchProfile.Item.ENVELOPE);
             folder.fetch(messages, fp);
 
-            MessageFormatter formatter = new MessageFormatter(userid);  //3.5
-            result = formatter.oldMessageTable(messages, userid);   // 3.6
+            // 공통된 MessageFormatter 사용
+            MessageFormatter formatter = new MessageFormatter(userid);
+            switch (mailType) {
+                case SENT_TO_MYSELF:
+                    result = formatter.getSentToMyselfMessages(messages, userid);   // 내게 쓴 메일
+                    break;
+                case SENT_MAIL:
+                    result = formatter.getSentMailMessages(messages, userid);   // 내가 보낸 메일
+                    break;
+                case RECEIVED_MAIL:
+                    result = formatter.getReceivedMessages(messages, userid);   // 내가 받은 메일
+                    break;
+                case DRAFT:
+                    result = formatter.getDraftMessages(messages, userid);   // 임시보관함
+                    break;
+                case ALL_MAIL:
+                    result = formatter.getAllMailMessages(messages, userid);
+                    break;
+                default:
+                    result = "잘못된 메일 유형입니다.";
+                    break;
+            }
 
-            folder.close(true);  // 3.7
-            store.close();       // 3.8
+            folder.close(true);  // 메일 폴더 닫기
+            store.close();       // POP3 연결 종료
         } catch (Exception ex) {
-            log.error("Pop3Agent.getMessageList() : exception = {}", ex.getMessage());
-            result = "Pop3Agent.getMessageList() : exception = " + ex.getMessage();
-        } return result;
+            log.error("Pop3Agent.getMessages() : exception = {}", ex.getMessage());
+            result = "Pop3Agent.getMessages() : exception = " + ex.getMessage();
+        }
+
+        return result;
+    }
+
+    public String getOldMessage(int start, int end) {
+        return getMessages(MAILBOX_INBOX, MessageFormatter.MailType.DRAFT, start, end);
+    }
+
+    public String getMyMail(int start, int end) {
+        return getMessages(MAILBOX_INBOX, MessageFormatter.MailType.SENT_TO_MYSELF, start, end);
+    }
+
+    public String getReceivedMessage(int start, int end) {
+        return getMessages(MAILBOX_INBOX, MessageFormatter.MailType.RECEIVED_MAIL, start, end);
+    }
+
+    public String getSendMail(int start, int end) {
+        return getMessages(MAILBOX_INBOX, MessageFormatter.MailType.SENT_MAIL, start, end);
+    }
+    
+    public String getMessageList(int start, int end){
+        return getMessages(MAILBOX_INBOX, MessageFormatter.MailType.ALL_MAIL, start, end);
     }
 }

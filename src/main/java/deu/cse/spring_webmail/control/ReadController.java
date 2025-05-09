@@ -56,13 +56,13 @@ public class ReadController {
     @GetMapping("/show_message")
     public String showMessage(@RequestParam Integer msgid, Model model) {
         log.debug("download_folder = {}", DOWNLOAD_FOLDER);
-        
+
         Pop3Agent pop3 = new Pop3Agent();
         pop3.setHost((String) session.getAttribute("host"));
         pop3.setUserid((String) session.getAttribute("userid"));
         pop3.setPassword((String) session.getAttribute("password"));
         pop3.setRequest(request);
-        
+
         String msg = pop3.getMessage(msgid);
         session.setAttribute("sender", pop3.getSender());  // 220612 LJM - added
         session.setAttribute("subject", pop3.getSubject());
@@ -70,7 +70,7 @@ public class ReadController {
         model.addAttribute("msg", msg);
         return "/read_mail/show_message";
     }
-    
+
     @GetMapping("/download")
     public ResponseEntity<Resource> download(@RequestParam("userid") String userId,
             @RequestParam("filename") String fileName) {
@@ -80,7 +80,7 @@ public class ReadController {
         } catch (UnsupportedEncodingException ex) {
             log.error("error");
         }
-        
+
         // 1. 내려받기할 파일의 기본 경로 설정
         String basePath = ctx.getRealPath(DOWNLOAD_FOLDER) + File.separator + userId;
 
@@ -113,11 +113,11 @@ public class ReadController {
 
         return new ResponseEntity<>(resource, headers, HttpStatus.OK);
     }
-    
+
     @GetMapping("/delete_mail.do")
     public String deleteMailDo(@RequestParam("msgid") Integer msgId, RedirectAttributes attrs) {
         log.debug("delete_mail.do: msgid = {}", msgId);
-        
+
         String host = (String) session.getAttribute("host");
         String userid = (String) session.getAttribute("userid");
         String password = (String) session.getAttribute("password");
@@ -129,7 +129,117 @@ public class ReadController {
         } else {
             attrs.addFlashAttribute("msg", "메시지 삭제를 실패하였습니다.");
         }
-        
+
         return "redirect:main_menu";
+    }
+
+    @GetMapping("/main_menu") //전체 메일 읽기
+    public String mainMenu(@RequestParam(defaultValue = "1") int page, Model model, HttpSession session) {
+        Pop3Agent pop3 = new Pop3Agent();
+        pop3.setHost((String) session.getAttribute("host"));
+        pop3.setUserid((String) session.getAttribute("userid"));
+        pop3.setPassword((String) session.getAttribute("password"));
+
+        int pageSize = 10;
+        int totalCount = pop3.getMessageCount();
+        int totalPages = (int) Math.ceil((double) totalCount / pageSize);
+
+        int start = totalCount - (page - 1) * pageSize;
+        int end = Math.max(start - pageSize + 1, 1);
+
+        String messageList = pop3.getMessageList(start, end);
+        model.addAttribute("messageList", messageList);
+        model.addAttribute("totalCount", totalCount);
+        model.addAttribute("currentPage", page);
+        model.addAttribute("totalPages", totalPages);
+        return "main_menu";
+    }
+
+    @GetMapping("/send_mail") //내가 보낸 메일
+    public String send_mail(@RequestParam(defaultValue = "1") int page, Model model, HttpSession session) {
+        Pop3Agent pop3 = new Pop3Agent();
+        pop3.setHost((String) session.getAttribute("host"));
+        pop3.setUserid((String) session.getAttribute("userid"));
+        pop3.setPassword((String) session.getAttribute("password"));
+
+        int pageSize = 10;
+        int totalCount = pop3.getMessageCount();
+        int totalPages = (int) Math.ceil((double) totalCount / pageSize);
+
+        int start = totalCount - (page - 1) * pageSize;
+        int end = Math.max(start - pageSize + 1, 1);
+
+        String sendMailList = pop3.getSendMail(start, end);
+        model.addAttribute("messageList", sendMailList);
+        model.addAttribute("totalCount", totalCount);
+        model.addAttribute("currentPage", page);
+        model.addAttribute("totalPages", totalPages);
+        return "main_menu";
+    }
+
+    @GetMapping("/received_mail") //내가 받은 메일
+    public String received_mail(@RequestParam(defaultValue = "1") int page, Model model, HttpSession session) {
+        Pop3Agent pop3 = new Pop3Agent();
+        pop3.setHost((String) session.getAttribute("host"));
+        pop3.setUserid((String) session.getAttribute("userid"));
+        pop3.setPassword((String) session.getAttribute("password"));
+
+        int pageSize = 10;
+        int totalCount = pop3.getMessageCount();
+        int totalPages = (int) Math.ceil((double) totalCount / pageSize);
+
+        int start = totalCount - (page - 1) * pageSize;
+        int end = Math.max(start - pageSize + 1, 1);
+
+        String receivedMailList = pop3.getReceivedMessage(start, end);
+        model.addAttribute("messageList", receivedMailList);
+        model.addAttribute("totalCount", totalCount);
+        model.addAttribute("currentPage", page);
+        model.addAttribute("totalPages", totalPages);
+        return "main_menu";
+    }
+
+    @GetMapping("/my_mail") //내게 쓴 메일
+    public String my_mail(@RequestParam(defaultValue = "1") int page, Model model, HttpSession session) {
+        Pop3Agent pop3 = new Pop3Agent();
+        pop3.setHost((String) session.getAttribute("host"));
+        pop3.setUserid((String) session.getAttribute("userid"));
+        pop3.setPassword((String) session.getAttribute("password"));
+
+        int pageSize = 10;
+        int totalCount = pop3.getMessageCount();
+        int totalPages = (int) Math.ceil((double) totalCount / pageSize);
+
+        int start = totalCount - (page - 1) * pageSize;
+        int end = Math.max(start - pageSize + 1, 1);
+
+        String myMailList = pop3.getMyMail(start, end);
+        model.addAttribute("messageList", myMailList);
+        model.addAttribute("totalCount", totalCount);
+        model.addAttribute("currentPage", page);
+        model.addAttribute("totalPages", totalPages);
+        return "main_menu";
+    }
+
+    @GetMapping("/mail_box") //임시보관함
+    public String mail_box(@RequestParam(defaultValue = "1") int page, Model model, HttpSession session) {
+        Pop3Agent pop3 = new Pop3Agent();
+        pop3.setHost((String) session.getAttribute("host"));
+        pop3.setUserid((String) session.getAttribute("userid"));
+        pop3.setPassword((String) session.getAttribute("password"));
+
+        int pageSize = 10;
+        int totalCount = pop3.getMessageCount();
+        int totalPages = (int) Math.ceil((double) totalCount / pageSize);
+
+        int start = totalCount - (page - 1) * pageSize;
+        int end = Math.max(start - pageSize + 1, 1);
+
+        String oldMessageList = pop3.getOldMessage(start, end);
+        model.addAttribute("messageList", oldMessageList);
+        model.addAttribute("totalCount", totalCount);
+        model.addAttribute("currentPage", page);
+        model.addAttribute("totalPages", totalPages);
+        return "main_menu";
     }
 }
