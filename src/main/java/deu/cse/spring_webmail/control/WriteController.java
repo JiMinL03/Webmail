@@ -38,8 +38,8 @@ public class WriteController {
     @GetMapping("/write_mail")
     public String writeMail() {
         log.debug("GET /write_mail called...");
-        session.removeAttribute("sender");
-        return "write_mail/write_mail";
+        session.removeAttribute("sender");  // 임시 저장된 값이 있으면 삭제
+        return "write_mail/write_mail";  // 메일 작성 화면 반환
     }
 
     @PostMapping("/write_mail.do")
@@ -47,37 +47,55 @@ public class WriteController {
                               @RequestParam String cc,
                               @RequestParam String subj,
                               @RequestParam String body,
-                              @RequestParam(name = "file1") MultipartFile upFile,
+                              @RequestParam(name = "file1", required = false) MultipartFile upFile,
+                              @RequestParam String action,
                               RedirectAttributes attrs) {
 
-        log.debug("POST /write_mail.do - to: {}, cc: {}, subj: {}, file: {}",
-                to, cc, subj, upFile.getOriginalFilename());
+        log.debug("POST /write_mail.do - to: {}, cc: {}, subj: {}, file: {}, action: {}",
+                to, cc, subj, (upFile != null ? upFile.getOriginalFilename() : "없음"), action);
 
-        // 파일 업로드 처리
-        if (!upFile.isEmpty()) {
+        if ("save".equals(action)) {
+            // 임시 저장: 세션에 값 저장
+            session.setAttribute("draft_to", to);
+            session.setAttribute("draft_cc", cc);
+            session.setAttribute("draft_subj", subj);
+            session.setAttribute("draft_body", body);
+            attrs.addFlashAttribute("msg", "임시 저장이 완료되었습니다.");
+            return "redirect:/write_mail";
+        }
+
+        // 파일이 존재하는 경우 업로드 처리
+        if (upFile != null && !upFile.isEmpty()) {
             String basePath = ctx.getRealPath(uploadFolder);
             File dir = new File(basePath);
             if (!dir.exists()) {
-                dir.mkdirs();
+                dir.mkdirs();  // 폴더 없으면 생성
             }
 
             File file = new File(dir, upFile.getOriginalFilename());
             try (BufferedOutputStream bos = new BufferedOutputStream(new FileOutputStream(file))) {
-                bos.write(upFile.getBytes());
+                bos.write(upFile.getBytes());  // 파일 업로드
             } catch (IOException e) {
                 log.error("File upload failed: {}", e.getMessage());
             }
         }
 
-        // 이메일 전송
+        // 메일 전송 처리
         boolean sendSuccessful = sendMessage(to, cc, subj, body, upFile);
         if (sendSuccessful) {
             attrs.addFlashAttribute("msg", "메일 전송에 성공했습니다.");
+
+            // 메일 전송 성공 시 임시 저장된 내용 삭제
+            session.removeAttribute("draft_to");
+            session.removeAttribute("draft_cc");
+            session.removeAttribute("draft_subj");
+            session.removeAttribute("draft_body");
+
         } else {
             attrs.addFlashAttribute("msg", "메일 전송에 실패했습니다.");
         }
 
-        return "redirect:/main_menu";
+        return "redirect:/main_menu";  // 메인 메뉴로 리다이렉트
     }
 
     private boolean sendMessage(String to, String cc, String subject, String body, MultipartFile upFile) {
@@ -90,12 +108,15 @@ public class WriteController {
         agent.setSubj(subject);
         agent.setBody(body);
 
-        String fileName = upFile.getOriginalFilename();
-        if (fileName != null && !fileName.isEmpty()) {
-            File file = new File(ctx.getRealPath(uploadFolder), fileName);
-            agent.setFile1(file.getAbsolutePath());
+        // 파일이 첨부되었다면 첨부파일 경로 설정
+        if (upFile != null) {
+            String fileName = upFile.getOriginalFilename();
+            if (fileName != null && !fileName.isEmpty()) {
+                File file = new File(ctx.getRealPath(uploadFolder), fileName);
+                agent.setFile1(file.getAbsolutePath());
+            }
         }
 
-        return agent.sendMessage();
+        return agent.sendMessage();  // 메일 전송
     }
 }
