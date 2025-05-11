@@ -17,6 +17,8 @@ import lombok.extern.slf4j.Slf4j;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.stream.Collectors;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -40,12 +42,9 @@ public class MessageParser {
 
         PropertyReader props = new PropertyReader();
         String downloadPath = props.getProperty("file.download_folder");
-        downloadTempDir = request.getServletContext().getRealPath(downloadPath);
+        this.downloadTempDir = request.getServletContext().getRealPath(downloadPath);
 
-        File f = new File(downloadTempDir);
-        if (!f.exists() && !f.mkdir()) {
-            log.warn("다운로드 디렉터리 생성 실패: {}", downloadTempDir);
-        }
+        createDirectoryIfNotExists(downloadTempDir);
     }
 
     public boolean parse(boolean parseBody) {
@@ -56,61 +55,48 @@ public class MessageParser {
             }
             return true;
         } catch (Exception ex) {
-            log.error("MessageParser.parse() - Exception : {}", ex.getMessage(), ex);
+            log.error("메일 파싱 실패: {}", ex.getMessage(), ex);
             return false;
         }
     }
 
-    // 메일 헤더 정보 추출
     private void extractEnvelope() throws Exception {
-        fromAddress = message.getFrom()[0].toString();
-        toAddress = getAddresses(message.getRecipients(Message.RecipientType.TO));
-        Address[] addr = message.getRecipients(Message.RecipientType.CC);
-        ccAddress = (addr != null) ? getAddresses(addr) : "";
+        fromAddress = addressToString(message.getFrom());
+        toAddress = addressToString(message.getRecipients(Message.RecipientType.TO));
+        ccAddress = addressToString(message.getRecipients(Message.RecipientType.CC));
         subject = message.getSubject();
-        sentDate = message.getSentDate().toString();
-        if (sentDate.length() > 8) {
-            sentDate = sentDate.substring(0, sentDate.length() - 8);
-        }
+        sentDate = trimDate(message.getSentDate().toString());
     }
 
-    // 메일 본문 또는 첨부파일 처리
     private void processPart(Part part) throws Exception {
-        String disposition = part.getDisposition();
-
-        if (isAttachment(disposition)) {
-            handleAttachment(part);
+        if (part.isMimeType("multipart/*")) {
+            processMultipart(part);
         } else if (part.isMimeType("text/*")) {
             extractTextContent(part);
-        } else if (part.isMimeType("multipart/*")) {
-            processMultipart(part);
+        } else if (isAttachment(part.getDisposition())) {
+            handleAttachment(part);
         }
     }
 
-    // 첨부파일 여부 확인
     private boolean isAttachment(String disposition) {
         return disposition != null &&
-                (disposition.equalsIgnoreCase(Part.ATTACHMENT) || disposition.equalsIgnoreCase(Part.INLINE));
+               (Part.ATTACHMENT.equalsIgnoreCase(disposition) || Part.INLINE.equalsIgnoreCase(disposition));
     }
 
-    // 첨부파일 저장 처리
     private void handleAttachment(Part part) throws Exception {
-        fileName = MimeUtility.decodeText(part.getFileName());
-        if (fileName == null) return;
+        String originalFileName = part.getFileName();
+        if (originalFileName == null) return;
 
-        String tempUserDir = downloadTempDir + File.separator + userid;
-        File dir = new File(tempUserDir);
-        if (!dir.exists() && !dir.mkdir()) {
-            log.warn("사용자 디렉터리 생성 실패: {}", tempUserDir);
-        }
+        fileName = MimeUtility.decodeText(originalFileName).replace(" ", "_");
+        String userDir = downloadTempDir + File.separator + userid;
+        createDirectoryIfNotExists(userDir);
 
-        String safeFileName = fileName.replace(" ", "_");
-        try (FileOutputStream fos = new FileOutputStream(tempUserDir + File.separator + safeFileName)) {
+        File file = new File(userDir, fileName);
+        try (FileOutputStream fos = new FileOutputStream(file)) {
             part.getDataHandler().writeTo(fos);
         }
     }
 
-    // 텍스트 MIME 처리
     private void extractTextContent(Part part) throws Exception {
         body = (String) part.getContent();
         if (part.isMimeType("text/plain")) {
@@ -118,23 +104,28 @@ public class MessageParser {
         }
     }
 
-    // 멀티파트 처리 (재귀 호출)
     private void processMultipart(Part part) throws Exception {
-        Multipart mp = (Multipart) part.getContent();
-        for (int i = 0; i < mp.getCount(); i++) {
-            processPart(mp.getBodyPart(i));
+        Multipart multipart = (Multipart) part.getContent();
+        for (int i = 0; i < multipart.getCount(); i++) {
+            processPart(multipart.getBodyPart(i));
         }
     }
 
-    // 주소 배열을 문자열로 변환
-    private String getAddresses(Address[] addresses) {
-        StringBuilder buffer = new StringBuilder();
-        for (Address address : addresses) {
-            buffer.append(address.toString()).append(", ");
+    private String addressToString(Address[] addresses) {
+        if (addresses == null || addresses.length == 0) return "";
+        return Arrays.stream(addresses)
+                .map(Address::toString)
+                .collect(Collectors.joining(", "));
+    }
+
+    private String trimDate(String dateStr) {
+        return (dateStr.length() > 8) ? dateStr.substring(0, dateStr.length() - 8) : dateStr;
+    }
+
+    private void createDirectoryIfNotExists(String path) {
+        File dir = new File(path);
+        if (!dir.exists() && !dir.mkdirs()) {
+            log.warn("디렉터리 생성 실패: {}", path);
         }
-        if (buffer.length() >= 2) {
-            buffer.setLength(buffer.length() - 2);
-        }
-        return buffer.toString();
     }
 }
