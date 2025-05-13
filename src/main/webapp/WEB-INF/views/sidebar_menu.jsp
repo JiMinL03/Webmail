@@ -25,6 +25,7 @@
         <p> <a href="received_mail"> 내가 받은 메일 </a> </p>
         <p> <a href="my_mail"> 내게 쓴 메일 </a> </p>
         <p> <a href="mail_box"> 임시보관함 </a> </p>
+        <p> <a href="write_mail"> 메일 쓰기 </a> </p>
         
         <p><a href="login.do?menu=<%= CommandType.LOGOUT %>">로그아웃</a></p>
     </body>
