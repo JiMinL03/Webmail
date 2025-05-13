@@ -73,13 +73,9 @@ public class UserAdminAgent {
     public boolean addUser(String userId, String password) {
         
         
-        // 사용자 추가할 때, id에 도메인 빼고 작성하면 자동으로 도메인 넣어주기
-        
-        if(!userId.contains("@")){
-            userId=userId+"@user.com";
-        }
-        
-        String url = getBaseUrl(true) + userId;
+
+        String url = baseUrl + "/" + userId;
+
         
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
@@ -100,6 +96,7 @@ public class UserAdminAgent {
         }
         return false;
     }
+    
 
     public List<String> getUserList() {
         String url = getBaseUrl(false);
