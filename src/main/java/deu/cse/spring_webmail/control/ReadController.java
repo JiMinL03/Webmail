@@ -52,6 +52,13 @@ public class ReadController {
     private HttpServletRequest request;
     @Value("${file.download_folder}")
     private String DOWNLOAD_FOLDER;
+    private static final String SESSION_USERID = "userid";
+    private static final String SESSION_PASSWORD = "password";
+    private static final String ATTR_MESSAGE_LIST = "messageList";
+    private static final String ATTR_TOTAL_COUNT = "totalCount";
+    private static final String ATTR_CURRENT_PAGE = "currentPage";
+    private static final String ATTR_TOTAL_PAGES = "totalPages";
+    private static final String ATTR_MAIN_MENU = "main_menu";
 
     @GetMapping("/show_message")
     public String showMessage(@RequestParam Integer msgid, Model model) {
@@ -59,8 +66,8 @@ public class ReadController {
 
         Pop3Agent pop3 = new Pop3Agent();
         pop3.setHost((String) session.getAttribute("host"));
-        pop3.setUserid((String) session.getAttribute("userid"));
-        pop3.setPassword((String) session.getAttribute("password"));
+        pop3.setUserid((String) session.getAttribute(SESSION_USERID));
+        pop3.setPassword((String) session.getAttribute(SESSION_PASSWORD));
         pop3.setRequest(request);
 
         String msg = pop3.getMessage(msgid);
@@ -119,8 +126,8 @@ public class ReadController {
         log.debug("delete_mail.do: msgid = {}", msgId);
 
         String host = (String) session.getAttribute("host");
-        String userid = (String) session.getAttribute("userid");
-        String password = (String) session.getAttribute("password");
+        String userid = (String) session.getAttribute(SESSION_USERID);
+        String password = (String) session.getAttribute(SESSION_PASSWORD);
 
         Pop3Agent pop3 = new Pop3Agent(host, userid, password);
         boolean deleteSuccessful = pop3.deleteMessage(msgId, true);
@@ -137,8 +144,8 @@ public class ReadController {
     public String mainMenu(@RequestParam(defaultValue = "1") int page, Model model, HttpSession session) {
         Pop3Agent pop3 = new Pop3Agent();
         pop3.setHost((String) session.getAttribute("host"));
-        pop3.setUserid((String) session.getAttribute("userid"));
-        pop3.setPassword((String) session.getAttribute("password"));
+        pop3.setUserid((String) session.getAttribute(SESSION_USERID));
+        pop3.setPassword((String) session.getAttribute(SESSION_PASSWORD));
 
         int pageSize = 10;
         int totalCount = pop3.getMessageCount();
@@ -148,19 +155,19 @@ public class ReadController {
         int end = Math.max(start - pageSize + 1, 1);
 
         String messageList = pop3.getMessageList(start, end);
-        model.addAttribute("messageList", messageList);
-        model.addAttribute("totalCount", totalCount);
-        model.addAttribute("currentPage", page);
-        model.addAttribute("totalPages", totalPages);
-        return "main_menu";
+        model.addAttribute(ATTR_MESSAGE_LIST, messageList);
+        model.addAttribute(ATTR_TOTAL_COUNT, totalCount);
+        model.addAttribute(ATTR_CURRENT_PAGE, page);
+        model.addAttribute(ATTR_TOTAL_PAGES, totalPages);
+        return ATTR_MAIN_MENU;
     }
 
     @GetMapping("/send_mail") //내가 보낸 메일
     public String send_mail(@RequestParam(defaultValue = "1") int page, Model model, HttpSession session) {
         Pop3Agent pop3 = new Pop3Agent();
         pop3.setHost((String) session.getAttribute("host"));
-        pop3.setUserid((String) session.getAttribute("userid"));
-        pop3.setPassword((String) session.getAttribute("password"));
+        pop3.setUserid((String) session.getAttribute(SESSION_USERID));
+        pop3.setPassword((String) session.getAttribute(SESSION_PASSWORD));
 
         int pageSize = 10;
         int totalCount = pop3.getMessageCount();
@@ -170,19 +177,19 @@ public class ReadController {
         int end = Math.max(start - pageSize + 1, 1);
 
         String sendMailList = pop3.getSendMail(start, end);
-        model.addAttribute("messageList", sendMailList);
-        model.addAttribute("totalCount", totalCount);
-        model.addAttribute("currentPage", page);
-        model.addAttribute("totalPages", totalPages);
-        return "main_menu";
+        model.addAttribute(ATTR_MESSAGE_LIST, sendMailList);
+        model.addAttribute(ATTR_TOTAL_COUNT, totalCount);
+        model.addAttribute(ATTR_CURRENT_PAGE, page);
+        model.addAttribute(ATTR_TOTAL_PAGES, totalPages);
+        return ATTR_MAIN_MENU;
     }
 
     @GetMapping("/received_mail") //내가 받은 메일
     public String received_mail(@RequestParam(defaultValue = "1") int page, Model model, HttpSession session) {
         Pop3Agent pop3 = new Pop3Agent();
         pop3.setHost((String) session.getAttribute("host"));
-        pop3.setUserid((String) session.getAttribute("userid"));
-        pop3.setPassword((String) session.getAttribute("password"));
+        pop3.setUserid((String) session.getAttribute(SESSION_USERID));
+        pop3.setPassword((String) session.getAttribute(SESSION_PASSWORD));
 
         int pageSize = 10;
         int totalCount = pop3.getMessageCount();
@@ -192,19 +199,19 @@ public class ReadController {
         int end = Math.max(start - pageSize + 1, 1);
 
         String receivedMailList = pop3.getReceivedMessage(start, end);
-        model.addAttribute("messageList", receivedMailList);
-        model.addAttribute("totalCount", totalCount);
-        model.addAttribute("currentPage", page);
-        model.addAttribute("totalPages", totalPages);
-        return "main_menu";
+        model.addAttribute(ATTR_MESSAGE_LIST, receivedMailList);
+        model.addAttribute(ATTR_TOTAL_COUNT, totalCount);
+        model.addAttribute(ATTR_CURRENT_PAGE, page);
+        model.addAttribute(ATTR_TOTAL_PAGES, totalPages);
+        return ATTR_MAIN_MENU;
     }
 
     @GetMapping("/my_mail") //내게 쓴 메일
     public String my_mail(@RequestParam(defaultValue = "1") int page, Model model, HttpSession session) {
         Pop3Agent pop3 = new Pop3Agent();
         pop3.setHost((String) session.getAttribute("host"));
-        pop3.setUserid((String) session.getAttribute("userid"));
-        pop3.setPassword((String) session.getAttribute("password"));
+        pop3.setUserid((String) session.getAttribute(SESSION_USERID));
+        pop3.setPassword((String) session.getAttribute(SESSION_PASSWORD));
 
         int pageSize = 10;
         int totalCount = pop3.getMessageCount();
@@ -214,19 +221,19 @@ public class ReadController {
         int end = Math.max(start - pageSize + 1, 1);
 
         String myMailList = pop3.getMyMail(start, end);
-        model.addAttribute("messageList", myMailList);
-        model.addAttribute("totalCount", totalCount);
-        model.addAttribute("currentPage", page);
-        model.addAttribute("totalPages", totalPages);
-        return "main_menu";
+        model.addAttribute(ATTR_MESSAGE_LIST, myMailList);
+        model.addAttribute(ATTR_TOTAL_COUNT, totalCount);
+        model.addAttribute(ATTR_CURRENT_PAGE, page);
+        model.addAttribute(ATTR_TOTAL_PAGES, totalPages);
+        return ATTR_MAIN_MENU;
     }
 
     @GetMapping("/mail_box") //임시보관함
     public String mail_box(@RequestParam(defaultValue = "1") int page, Model model, HttpSession session) {
         Pop3Agent pop3 = new Pop3Agent();
         pop3.setHost((String) session.getAttribute("host"));
-        pop3.setUserid((String) session.getAttribute("userid"));
-        pop3.setPassword((String) session.getAttribute("password"));
+        pop3.setUserid((String) session.getAttribute(SESSION_USERID));
+        pop3.setPassword((String) session.getAttribute(SESSION_PASSWORD));
 
         int pageSize = 10;
         int totalCount = pop3.getMessageCount();
@@ -236,10 +243,10 @@ public class ReadController {
         int end = Math.max(start - pageSize + 1, 1);
 
         String oldMessageList = pop3.getOldMessage(start, end);
-        model.addAttribute("messageList", oldMessageList);
-        model.addAttribute("totalCount", totalCount);
-        model.addAttribute("currentPage", page);
-        model.addAttribute("totalPages", totalPages);
-        return "main_menu";
+        model.addAttribute(ATTR_MESSAGE_LIST, oldMessageList);
+        model.addAttribute(ATTR_TOTAL_COUNT, totalCount);
+        model.addAttribute(ATTR_CURRENT_PAGE, page);
+        model.addAttribute(ATTR_TOTAL_PAGES, totalPages);
+        return ATTR_MAIN_MENU;
     }
 }

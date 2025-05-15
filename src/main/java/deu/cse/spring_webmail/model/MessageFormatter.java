@@ -56,46 +56,32 @@ public class MessageFormatter {
             MessageParser parser = new MessageParser(messages[i], userid);
             parser.parse(false);  // envelope 정보만 필요
 
-            boolean shouldInclude = false;
-
-            // 메일함 타입에 따른 필터링
-            switch (mailType) {
-                case SENT_TO_MYSELF:
-                    if (userid.equals(parser.getFromAddress()) && userid.equals(parser.getToAddress())) {
-                        shouldInclude = true;  // 내게 쓴 메일
-                    }
-                    break;
-                case SENT_MAIL:
-                    if (userid.equals(parser.getFromAddress()) && !userid.equals(parser.getToAddress())) {
-                        shouldInclude = true;  // 내가 보낸 메일
-                    }
-                    break;
-                case RECEIVED_MAIL:
-                    if (userid.equals(parser.getToAddress()) && !userid.equals(parser.getFromAddress())) {
-                        shouldInclude = true;  // 내가 받은 메일
-                    }
-                    break;
-                case DRAFT:
-                    if (isThirtyDaysOld(parser.getSentDate())) {
-                        shouldInclude = true;  // 임시보관함
-                    }
-                    break;
-                case ALL_MAIL:
-                    shouldInclude = true;  // 전체 메일은 조건 없이 모든 메일을 포함
-                    break;
-                default:
-                    shouldInclude = true;
-                    break;
-            }
-
-            if (shouldInclude) {
-                String row = createRow(i, parser);
-                buffer.append(row);
+            if (shouldIncludeMessage(parser, userid, mailType)) {
+                buffer.append(createRow(i, parser));
             }
         }
 
         buffer.append("</table>");
         return buffer.toString();
+    }
+
+    private boolean shouldIncludeMessage(MessageParser parser, String userid, MailType mailType) {
+        String from = parser.getFromAddress();
+        String to = parser.getToAddress();
+
+        switch (mailType) {
+            case SENT_TO_MYSELF:
+                return userid.equals(from) && userid.equals(to);
+            case SENT_MAIL:
+                return userid.equals(from) && !userid.equals(to);
+            case RECEIVED_MAIL:
+                return userid.equals(to) && !userid.equals(from);
+            case DRAFT:
+                return isThirtyDaysOld(parser.getSentDate());
+            case ALL_MAIL:
+            default:
+                return true;
+        }
     }
 
     private String createRow(int index, MessageParser parser) {

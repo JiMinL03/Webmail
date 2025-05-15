@@ -58,6 +58,7 @@ public class Pop3Agent {
     private static final String MAILBOX_INBOX = "INBOX";
     private static final String VALUE_FALSE = "false";
     private static final String VALUE_TRUE = "true";
+    private static final String POP3_CONNECTION_FAILED = "POP3 connection failed!";
 
     public enum MailType {
         SENT_TO_MYSELF, // 내게 쓴 메일
@@ -120,7 +121,7 @@ public class Pop3Agent {
      */
     public int getMessageCount() { //페이징 기능 구현을 위한 전체 페이지 갯수 반혼
         if (!connectToStore()) {
-            log.error("POP3 connection failed!");
+            log.error(POP3_CONNECTION_FAILED);
             return 0; // 연결 실패 시 0 반환
         }
 
@@ -143,7 +144,7 @@ public class Pop3Agent {
         String result = "POP3  서버 연결이 되지 않아 메시지를 볼 수 없습니다.";
 
         if (!connectToStore()) {
-            log.error("POP3 connection failed!");
+            log.error(POP3_CONNECTION_FAILED);
             return result;
         }
 
@@ -199,7 +200,7 @@ public class Pop3Agent {
         Message[] messages = null;
 
         if (!connectToStore()) {
-            log.error("POP3 connection failed!");
+            log.error(POP3_CONNECTION_FAILED);
             return "POP3 연결이 되지 않아 메일 목록을 볼 수 없습니다.";
         }
 
