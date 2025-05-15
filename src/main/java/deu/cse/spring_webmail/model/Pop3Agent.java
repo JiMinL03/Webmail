@@ -4,6 +4,11 @@
  */
 package deu.cse.spring_webmail.model;
 
+import static deu.cse.spring_webmail.model.MessageFormatter.MailType.ALL_MAIL;
+import static deu.cse.spring_webmail.model.MessageFormatter.MailType.DRAFT;
+import static deu.cse.spring_webmail.model.MessageFormatter.MailType.RECEIVED_MAIL;
+import static deu.cse.spring_webmail.model.MessageFormatter.MailType.SENT_MAIL;
+import static deu.cse.spring_webmail.model.MessageFormatter.MailType.SENT_TO_MYSELF;
 import jakarta.mail.FetchProfile;
 import jakarta.mail.Flags;
 import jakarta.mail.Folder;
@@ -206,9 +211,9 @@ public class Pop3Agent {
 
         try {
             Folder folder = store.getFolder(mailboxType);  // mailBoxType에 따라 다른 메일함을 열 수 있음
-            folder.open(Folder.READ_ONLY); 
+            folder.open(Folder.READ_ONLY);
 
-            messages = folder.getMessages(end,  start);
+            messages = folder.getMessages(end, start);
             FetchProfile fp = new FetchProfile();
             fp.add(FetchProfile.Item.ENVELOPE);
             folder.fetch(messages, fp);
@@ -246,6 +251,57 @@ public class Pop3Agent {
         return result;
     }
 
+    public int countPage(MessageFormatter.MailType mailType) {
+        Message[] messages = null;
+        int count = 0;
+
+        if (!connectToStore()) {
+            log.error(POP3_CONNECTION_FAILED);
+            return 0;
+        }
+
+        try {
+            Folder folder = store.getFolder(MAILBOX_INBOX);
+            folder.open(Folder.READ_ONLY);
+
+            messages = folder.getMessages();
+            FetchProfile fp = new FetchProfile();
+            fp.add(FetchProfile.Item.ENVELOPE);
+            folder.fetch(messages, fp);
+
+            MessageFormatter formatter = new MessageFormatter(userid);
+
+            switch (mailType) {
+                case SENT_TO_MYSELF:
+                    count = formatter.countIncludedMessages(messages, userid, MessageFormatter.MailType.SENT_TO_MYSELF);
+                    break;
+                case SENT_MAIL:
+                    count = formatter.countIncludedMessages(messages, userid, MessageFormatter.MailType.SENT_MAIL);
+                    break;
+                case RECEIVED_MAIL:
+                    count = formatter.countIncludedMessages(messages, userid, MessageFormatter.MailType.RECEIVED_MAIL);
+                    break;
+                case DRAFT:
+                    count = formatter.countIncludedMessages(messages, userid, MessageFormatter.MailType.DRAFT);
+                    break;
+                case ALL_MAIL:
+                    count = formatter.countIncludedMessages(messages, userid, MessageFormatter.MailType.ALL_MAIL);
+                    break;
+                default:
+                    log.warn("알 수 없는 mailType입니다: {}", mailType);
+                    break;
+            }
+
+            folder.close(true);
+            store.close();
+
+        } catch (Exception ex) {
+            log.error("Pop3Agent.countPage() : 예외 발생 = {}", ex.getMessage(), ex);
+        }
+
+        return count;
+    }
+
     public String getOldMessage(int start, int end) {
         return getMessages(MAILBOX_INBOX, MessageFormatter.MailType.DRAFT, start, end);
     }
@@ -261,8 +317,8 @@ public class Pop3Agent {
     public String getSendMail(int start, int end) {
         return getMessages(MAILBOX_INBOX, MessageFormatter.MailType.SENT_MAIL, start, end);
     }
-    
-    public String getMessageList(int start, int end){
+
+    public String getMessageList(int start, int end) {
         return getMessages(MAILBOX_INBOX, MessageFormatter.MailType.ALL_MAIL, start, end);
     }
 }

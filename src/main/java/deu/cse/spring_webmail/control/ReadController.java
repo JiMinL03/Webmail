@@ -5,6 +5,12 @@
 package deu.cse.spring_webmail.control;
 
 import deu.cse.spring_webmail.PropertyReader;
+import deu.cse.spring_webmail.model.MessageFormatter;
+import static deu.cse.spring_webmail.model.MessageFormatter.MailType.ALL_MAIL;
+import static deu.cse.spring_webmail.model.MessageFormatter.MailType.DRAFT;
+import static deu.cse.spring_webmail.model.MessageFormatter.MailType.RECEIVED_MAIL;
+import static deu.cse.spring_webmail.model.MessageFormatter.MailType.SENT_MAIL;
+import static deu.cse.spring_webmail.model.MessageFormatter.MailType.SENT_TO_MYSELF;
 import deu.cse.spring_webmail.model.Pop3Agent;
 import jakarta.mail.internet.MimeUtility;
 import java.io.File;
@@ -171,12 +177,13 @@ public class ReadController {
 
         int pageSize = 10;
         int totalCount = pop3.getMessageCount();
-        int totalPages = (int) Math.ceil((double) totalCount / pageSize);
+        int totalPages = 1;
 
         int start = totalCount - (page - 1) * pageSize;
         int end = Math.max(start - pageSize + 1, 1);
 
         String sendMailList = pop3.getSendMail(start, end);
+
         model.addAttribute(ATTR_MESSAGE_LIST, sendMailList);
         model.addAttribute(ATTR_TOTAL_COUNT, totalCount);
         model.addAttribute(ATTR_CURRENT_PAGE, page);
@@ -193,7 +200,7 @@ public class ReadController {
 
         int pageSize = 10;
         int totalCount = pop3.getMessageCount();
-        int totalPages = (int) Math.ceil((double) totalCount / pageSize);
+        int totalPages = 1;
 
         int start = totalCount - (page - 1) * pageSize;
         int end = Math.max(start - pageSize + 1, 1);
@@ -215,7 +222,7 @@ public class ReadController {
 
         int pageSize = 10;
         int totalCount = pop3.getMessageCount();
-        int totalPages = (int) Math.ceil((double) totalCount / pageSize);
+        int totalPages = 1;
 
         int start = totalCount - (page - 1) * pageSize;
         int end = Math.max(start - pageSize + 1, 1);
@@ -237,7 +244,7 @@ public class ReadController {
 
         int pageSize = 10;
         int totalCount = pop3.getMessageCount();
-        int totalPages = (int) Math.ceil((double) totalCount / pageSize);
+        int totalPages = 1;
 
         int start = totalCount - (page - 1) * pageSize;
         int end = Math.max(start - pageSize + 1, 1);
