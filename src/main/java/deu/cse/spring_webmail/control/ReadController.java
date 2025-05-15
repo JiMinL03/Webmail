@@ -4,13 +4,6 @@
  */
 package deu.cse.spring_webmail.control;
 
-import deu.cse.spring_webmail.PropertyReader;
-import deu.cse.spring_webmail.model.MessageFormatter;
-import static deu.cse.spring_webmail.model.MessageFormatter.MailType.ALL_MAIL;
-import static deu.cse.spring_webmail.model.MessageFormatter.MailType.DRAFT;
-import static deu.cse.spring_webmail.model.MessageFormatter.MailType.RECEIVED_MAIL;
-import static deu.cse.spring_webmail.model.MessageFormatter.MailType.SENT_MAIL;
-import static deu.cse.spring_webmail.model.MessageFormatter.MailType.SENT_TO_MYSELF;
 import deu.cse.spring_webmail.model.Pop3Agent;
 import jakarta.mail.internet.MimeUtility;
 import java.io.File;
@@ -23,9 +16,7 @@ import java.nio.file.Paths;
 import jakarta.servlet.ServletContext;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
-import java.lang.System.Logger;
 import lombok.extern.slf4j.Slf4j;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.PropertySource;
@@ -38,6 +29,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
@@ -255,5 +247,19 @@ public class ReadController {
         model.addAttribute(ATTR_CURRENT_PAGE, page);
         model.addAttribute(ATTR_TOTAL_PAGES, totalPages);
         return ATTR_MAIN_MENU;
+    }
+    @GetMapping("/search_result")
+    public String searchMail(@RequestParam("keyword") String keyword, Model model, HttpSession session){
+        Pop3Agent pop3 = new Pop3Agent();
+        pop3.setHost((String) session.getAttribute("host"));
+        pop3.setUserid((String) session.getAttribute(SESSION_USERID));
+        pop3.setPassword((String) session.getAttribute(SESSION_PASSWORD));
+        
+        String searchMail = pop3.getSearchMail(keyword);
+        int totalCount = pop3.getMessageCount();
+        
+        model.addAttribute(ATTR_TOTAL_COUNT, totalCount);
+        model.addAttribute(ATTR_MESSAGE_LIST, searchMail);
+        return "searchMail";
     }
 }

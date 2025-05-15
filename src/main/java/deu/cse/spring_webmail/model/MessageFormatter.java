@@ -8,6 +8,7 @@ import jakarta.mail.Message;
 import jakarta.servlet.http.HttpServletRequest;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.Locale;
 import lombok.Getter;
@@ -80,9 +81,19 @@ public class MessageFormatter {
             case DRAFT:
                 return isThirtyDaysOld(parser.getSentDate());
             case ALL_MAIL:
+                return containsUser(to, userid) || containsUser(parser.getCcAddress(), userid); //숨은 참조 안 보이게
             default:
                 return true;
         }
+    }
+
+    private boolean containsUser(String addressList, String userid) {
+        if (addressList == null) {
+            return false;
+        }
+        return Arrays.stream(addressList.split(","))
+                .map(String::trim)
+                .anyMatch(addr -> addr.contains(userid));
     }
 
     private String createRow(int index, MessageParser parser) {
@@ -183,5 +194,30 @@ public class MessageFormatter {
             e.printStackTrace();
             return false;
         }
+    }
+
+    public String searchMail(Message[] messages, String keyword, String userid) {
+        StringBuilder buffer = new StringBuilder();
+        String tableHeader = "<table border='1'>"
+                + "<tr><th>보낸 사람</th><th>제목</th><th>날짜</th><th>삭제</th></tr>";
+        buffer.append("<h2>").append(keyword).append("</h2>").append(tableHeader);
+
+        try {
+            for (int i = messages.length - 1; i >= 0; i--) {
+                Message message = messages[i];
+                String subject = message.getSubject();
+                if (subject != null && subject.contains(keyword)) {
+                    MessageParser parser = new MessageParser(message, userid);
+                    parser.parse(false);
+                    buffer.append(createRow(i, parser));
+                }
+            }
+            buffer.append("</table>");
+        } catch (Exception ex) {
+            log.error("searchMail() 예외 발생: {}", ex.getMessage(), ex);
+            return "검색 중 오류 발생";
+        }
+
+        return buffer.toString();
     }
 }
