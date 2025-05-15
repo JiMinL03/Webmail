@@ -127,7 +127,7 @@ public class MessageFormatter {
 
 // 임시보관함
     public String getDraftMessages(Message[] messages, String userid) {
-        return getMessageTable(messages, userid, "임시보관함", MailType.DRAFT);
+        return getMessageTable(messages, userid, "삭제될 메일 보관함", MailType.DRAFT);
     }
 
     public String getMessage(Message message) {

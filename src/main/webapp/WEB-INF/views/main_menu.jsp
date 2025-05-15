@@ -47,7 +47,7 @@
             <!-- 메시지 목록 -->
             <c:forEach var="message" items="${messageList}">
                 <div>
-                    <p>${message}</p>
+                    ${message}
                     <hr/>
                 </div>
             </c:forEach>
