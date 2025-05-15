@@ -248,4 +248,19 @@ public class ReadController {
         model.addAttribute(ATTR_TOTAL_PAGES, totalPages);
         return ATTR_MAIN_MENU;
     }
+
+    @GetMapping("/search_result")
+    public String searchMail(@RequestParam("keyword") String keyword, Model model, HttpSession session) {
+        Pop3Agent pop3 = new Pop3Agent();
+        pop3.setHost((String) session.getAttribute("host"));
+        pop3.setUserid((String) session.getAttribute(SESSION_USERID));
+        pop3.setPassword((String) session.getAttribute(SESSION_PASSWORD));
+
+        String searchMail = pop3.getSearchMail(keyword);
+        int totalCount = pop3.getMessageCount();
+
+        model.addAttribute(ATTR_TOTAL_COUNT, totalCount);
+        model.addAttribute(ATTR_MESSAGE_LIST, searchMail);
+        return "searchMail";
+    }
 }
