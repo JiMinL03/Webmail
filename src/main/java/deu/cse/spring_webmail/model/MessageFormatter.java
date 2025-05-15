@@ -66,8 +66,9 @@ public class MessageFormatter {
     }
 
     private boolean shouldIncludeMessage(MessageParser parser, String userid, MailType mailType) {
-        String from = parser.getFromAddress();
-        String to = parser.getToAddress();
+        String from = parser.getFromAddress(); //보낸 사람
+        String to = parser.getToAddress(); //받은 사람
+        System.out.println("받은 사람: "+ to);
 
         switch (mailType) {
             case SENT_TO_MYSELF:
