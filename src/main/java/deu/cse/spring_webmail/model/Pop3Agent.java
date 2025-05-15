@@ -251,57 +251,6 @@ public class Pop3Agent {
         return result;
     }
 
-    public int countPage(MessageFormatter.MailType mailType) {
-        Message[] messages = null;
-        int count = 0;
-
-        if (!connectToStore()) {
-            log.error(POP3_CONNECTION_FAILED);
-            return 0;
-        }
-
-        try {
-            Folder folder = store.getFolder(MAILBOX_INBOX);
-            folder.open(Folder.READ_ONLY);
-
-            messages = folder.getMessages();
-            FetchProfile fp = new FetchProfile();
-            fp.add(FetchProfile.Item.ENVELOPE);
-            folder.fetch(messages, fp);
-
-            MessageFormatter formatter = new MessageFormatter(userid);
-
-            switch (mailType) {
-                case SENT_TO_MYSELF:
-                    count = formatter.countIncludedMessages(messages, userid, MessageFormatter.MailType.SENT_TO_MYSELF);
-                    break;
-                case SENT_MAIL:
-                    count = formatter.countIncludedMessages(messages, userid, MessageFormatter.MailType.SENT_MAIL);
-                    break;
-                case RECEIVED_MAIL:
-                    count = formatter.countIncludedMessages(messages, userid, MessageFormatter.MailType.RECEIVED_MAIL);
-                    break;
-                case DRAFT:
-                    count = formatter.countIncludedMessages(messages, userid, MessageFormatter.MailType.DRAFT);
-                    break;
-                case ALL_MAIL:
-                    count = formatter.countIncludedMessages(messages, userid, MessageFormatter.MailType.ALL_MAIL);
-                    break;
-                default:
-                    log.warn("알 수 없는 mailType입니다: {}", mailType);
-                    break;
-            }
-
-            folder.close(true);
-            store.close();
-
-        } catch (Exception ex) {
-            log.error("Pop3Agent.countPage() : 예외 발생 = {}", ex.getMessage(), ex);
-        }
-
-        return count;
-    }
-
     public String getOldMessage(int start, int end) {
         return getMessages(MAILBOX_INBOX, MessageFormatter.MailType.DRAFT, start, end);
     }
