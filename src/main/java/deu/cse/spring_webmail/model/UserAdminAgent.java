@@ -28,9 +28,8 @@ import org.springframework.web.client.RestTemplate;
  */
 @Slf4j
 public class UserAdminAgent {
-
-    private final RestTemplate restTemplate = new RestTemplate();
-
+    private RestTemplate restTemplate = new RestTemplate();
+    
     private String server;
     private int port;
     Socket socket = null;
@@ -45,9 +44,7 @@ public class UserAdminAgent {
 
     private final String baseUrl = "http://localhost:8000/users";
 
-    public UserAdminAgent() {
-    }
-
+  
     public UserAdminAgent(String server, int port,
             String admin_pass, String admin_id) {
         log.debug("UserAdminAgent created: server = " + server + ", port = " + port);
@@ -56,6 +53,7 @@ public class UserAdminAgent {
 
         this.ADMIN_PASSWORD = admin_pass;
         this.ADMIN_ID = admin_id;
+        
 
         log.debug("isConnected = {}, root.id = {}", isConnected, ADMIN_ID);
     }
@@ -70,6 +68,7 @@ public class UserAdminAgent {
     // return value:
     //   - true: addUser operation successful
     //   - false: addUser operation failed
+    
     public boolean addUser(String userId, String password) {
         
         
@@ -154,6 +153,7 @@ public class UserAdminAgent {
         return userList;
     } // parseUserList()
 
+    
     public boolean deleteUsers(String[] userList) {
         boolean allSuccess = true;
         for (String user : userList) {
@@ -180,81 +180,8 @@ public class UserAdminAgent {
             log.error("Error verifying user {}: {}", userId, e.getMessage());
             return false;
         }
-        /*
-        boolean status = false;
-        byte[] messageBuffer = new byte[1024];
-
-        try {
-            // --> verify userid
-            String verifyCommand = "verify " + userid;
-            os.write(verifyCommand.getBytes());
-
-            // read the result for verify command
-            // <-- User userid exists   or
-            // <-- User userid does not exist
-            is.read(messageBuffer);
-            String recvMessage = new String(messageBuffer);
-            if (recvMessage.contains("exists")) {
-                status = true;
-            }
-
-            quit();  // quit command
-        } catch (IOException ex) {
-            log.error("verify(): 예외 = {}", ex.getMessage());
-        } finally {
-            return status;
-        }*/
     }
-
-    /*private boolean connect() {
-        byte[] messageBuffer = new byte[1024];
-        boolean returnVal = false;
-        String sendMessage;
-        String recvMessage;
-
-        log.info("connect() : root.id = {}, root.password = {}", ROOT_ID, ADMIN_PASSWORD);
-
-        // root 인증: id, passwd - default: root
-        // 1: Login Id message 수신
-        
-        try {
-        log.debug("Step 1: 서버로부터 로그인 메시지 수신 대기");
-        is.read(messageBuffer);
-        recvMessage = new String(messageBuffer);
-            System.out.println("receive message " + recvMessage + "123");
-        log.debug("받은 메시지: {}", recvMessage.trim());
-
-        log.debug("Step 2: root ID 전송");
-        sendMessage = ROOT_ID + EOL;
-        os.write(sendMessage.getBytes());
-
-        log.debug("Step 3: 비밀번호 입력 메시지 수신 대기");
-        Arrays.fill(messageBuffer, (byte) 0);
-        is.read(messageBuffer);
-
-        log.debug("Step 4: root PASSWORD 전송");
-        sendMessage = ADMIN_PASSWORD + EOL;
-        os.write(sendMessage.getBytes());
-
-        log.debug("Step 5: Welcome 메시지 수신 대기");
-        Arrays.fill(messageBuffer, (byte) 0);
-        is.read(messageBuffer);
-        recvMessage = new String(messageBuffer);
-        log.debug("받은 메시지: {}", recvMessage.trim());
-        
-        if (recvMessage.contains("Welcome")) {
-        System.out.println("connect true");
-        returnVal = true;
-         } else {
-        System.out.println("connect false");
-         }
-        } catch (Exception e) {
-        log.error("connect() 예외 발생", e);
-         }
-
-
-        return returnVal;
-    }  // connect()*/
+    
     public boolean quit() {
         byte[] messageBuffer = new byte[1024];
         boolean status = false;
@@ -279,9 +206,63 @@ public class UserAdminAgent {
         } 
             return status;
         
+    }// 도메인 목록
+    public List<String> getDomainList() {
+        String url = String.format("http://%s:%d/domains", server, port);
+        try {
+            ResponseEntity<List<String>> response = restTemplate.exchange(url, HttpMethod.GET, null, new ParameterizedTypeReference<List<String>>() {});
+            List<String> domainList = response.getBody();
+            
+            if (domainList == null) {
+                log.info("도메인 목록이 비어 있습니다.");
+                return new LinkedList<>();
+            }
+            return domainList;
+        }
+        catch (Exception e) {
+            log.error("도메인 목록 가져오기 실패 : {}", e.getMessage());
+            return new LinkedList<>();
+        }
+    }
+    
+
+    // 도메인 추가
+    public boolean addDomain(String domain){
+        String url = String.format("http://%s:%d/domains/%s", server, port, domain);
+        
+        try {
+            restTemplate.put(url,null);
+            log.info("도메인 등록 성공: {}", domain);
+            return true;
+        }
+        catch (HttpClientErrorException e){
+            log.error("도메인 등록 실패: {} {} {}", domain, e.getStatusCode(), e.getResponseBodyAsString());
+        }
+        catch (Exception e){
+            log.error("도메인 등록 중 예외 발생 {}", e.toString());
+        }
+        return false;
+    }
+    
+    // 도메인 삭제
+    public boolean deleteDomain(String [] domainList) {
+        boolean success = true;
+        
+        for (String domain : domainList) {
+            try {
+                String url = String.format("http://%s:%d/domains/%s", server, port, domain);
+                restTemplate.delete(url);
+                log.info("도메인 삭제: {}", domain);
+            }
+            catch (Exception e) {
+                log.error("도메인 삭제 중 예외 발생 {}", e.toString());
+                success = false;
+            }
+        }
+        return success;
     }
     
     private String getBaseUrl(boolean withSlash) {
     return withSlash ? baseUrl + "/" : baseUrl;
-}
+    }
 }

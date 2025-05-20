@@ -171,3 +171,9 @@ a:hover {
     background-color: #28a745;
     color: white;
 }
+
+/* 도메인 목록 */
+#domain_list {
+    margin: 20px 10px 10px 170px;
+    padding: 10px;
+}
