@@ -38,7 +38,6 @@
             <jsp:include page="sidebar_menu.jsp" />
         </div>
 
-        <!-- 메시지 삭제 링크를 누르면 바로 삭제되어 실수할 수 있음. 해결 방법은? -->
         <div id="main">
             <form class="search-container" action="search_result" method="get">
                 <input type="text" id="searchInput" name="keyword" placeholder="검색어를 입력하세요">
@@ -52,32 +51,6 @@
                 </div>
             </c:forEach>
         </div>
-
-        <div class="pagination">
-            <!-- 이전 페이지 -->
-            <c:if test="${currentPage > 1}">
-                <a href="?page=${currentPage - 1}">이전</a>
-            </c:if>
-
-            <!-- 페이지 번호 -->
-            <c:forEach begin="1" end="${totalPages}" var="i">
-                <c:choose>
-                    <c:when test="${i == currentPage}">
-                        <strong>[${i}]</strong> <!-- 현재 페이지는 강조 -->
-                    </c:when>
-                    <c:otherwise>
-                        <a href="?page=${i}" class="page-link">[${i}]</a> <!-- 페이지 링크 -->
-                    </c:otherwise>
-                </c:choose>
-            </c:forEach>
-
-            <!-- 다음 페이지 -->
-            <c:if test="${currentPage < totalPages}">
-                <a href="?page=${currentPage + 1}">다음</a>
-            </c:if>
-        </div>
-
-
         <script type="text/javascript">
             function confirmDelete(msgId) {
                 var confirmation = confirm("정말 이 메시지를 삭제하시겠습니까?");

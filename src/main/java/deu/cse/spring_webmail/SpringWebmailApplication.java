@@ -15,6 +15,7 @@ import org.springframework.web.client.RestTemplate;
 @ComponentScan
 @SpringBootApplication
 @Slf4j
+@ComponentScan(basePackages = "deu.cse.spring_webmail.controller")
 public class SpringWebmailApplication {
 
     public static void main(String[] args) {
@@ -44,5 +45,4 @@ public class SpringWebmailApplication {
     public RestTemplate restTemplate() {
         return new RestTemplate();
     }
-
 }
