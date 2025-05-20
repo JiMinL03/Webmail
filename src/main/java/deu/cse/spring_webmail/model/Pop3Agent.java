@@ -4,6 +4,11 @@
  */
 package deu.cse.spring_webmail.model;
 
+import static deu.cse.spring_webmail.model.MessageFormatter.MailType.ALL_MAIL;
+import static deu.cse.spring_webmail.model.MessageFormatter.MailType.DRAFT;
+import static deu.cse.spring_webmail.model.MessageFormatter.MailType.RECEIVED_MAIL;
+import static deu.cse.spring_webmail.model.MessageFormatter.MailType.SENT_MAIL;
+import static deu.cse.spring_webmail.model.MessageFormatter.MailType.SENT_TO_MYSELF;
 import jakarta.mail.FetchProfile;
 import jakarta.mail.Flags;
 import jakarta.mail.Folder;
@@ -12,9 +17,6 @@ import jakarta.mail.Session;
 import jakarta.mail.Store;
 import java.util.Properties;
 import jakarta.servlet.http.HttpServletRequest;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -58,6 +60,7 @@ public class Pop3Agent {
     private static final String MAILBOX_INBOX = "INBOX";
     private static final String VALUE_FALSE = "false";
     private static final String VALUE_TRUE = "true";
+    private static final String POP3_CONNECTION_FAILED = "POP3 connection failed!";
 
     public enum MailType {
         SENT_TO_MYSELF, // 내게 쓴 메일
@@ -118,9 +121,9 @@ public class Pop3Agent {
     /*
      * 페이지 단위로 메일 목록을 보여주어야 함.
      */
-    public int getMessageCount() { //페이징 기능 구현을 위한 전체 페이지 갯수 반혼
+    public int getMessageCount() { //페이징 기능 구현을 위한 전체 페이지 갯수 반환
         if (!connectToStore()) {
-            log.error("POP3 connection failed!");
+            log.error(POP3_CONNECTION_FAILED);
             return 0; // 연결 실패 시 0 반환
         }
 
@@ -143,7 +146,7 @@ public class Pop3Agent {
         String result = "POP3  서버 연결이 되지 않아 메시지를 볼 수 없습니다.";
 
         if (!connectToStore()) {
-            log.error("POP3 connection failed!");
+            log.error(POP3_CONNECTION_FAILED);
             return result;
         }
 
@@ -169,7 +172,7 @@ public class Pop3Agent {
         return result;
     }
 
-    private boolean connectToStore() {
+    /*private boolean connectToStore() {
         boolean status = false;
         Properties props = System.getProperties();
         // https://jakarta.ee/specifications/mail/2.1/apidocs/jakarta.mail/jakarta/mail/package-summary.html
@@ -191,6 +194,44 @@ public class Pop3Agent {
             log.error("connectToStore 예외: {}", ex.getMessage());
         }
         return status;
+    }*/
+    private boolean connectToStore() {
+        boolean status = false;
+        Properties props = System.getProperties();
+
+        // host, userid, password 값이 null인지 확인
+        if (host == null || userid == null || password == null) {
+            log.error("메일 서버 연결 실패: host, userid, 또는 password가 null입니다.");
+            return false;
+        }
+
+        // POP3 서버 설정
+        props.setProperty("mail.pop3.host", host);
+        props.setProperty("mail.pop3.user", userid);
+        props.setProperty("mail.pop3.apop.enable", VALUE_FALSE);
+        props.setProperty("mail.pop3.disablecapa", VALUE_TRUE);  // 200102 LJM - added cf. https://javaee.github.io/javamail/docs/api/com/sun/mail/pop3/package-summary.html
+        props.setProperty("mail.debug", VALUE_FALSE);
+        props.setProperty("mail.pop3.debug", VALUE_FALSE);
+
+        // 세션 초기화
+        Session session = Session.getInstance(props);
+        session.setDebug(false);
+
+        try {
+            // store 초기화
+            store = session.getStore("pop3");
+            if (store == null) {
+                log.error("메일 서버 연결 실패: store가 null입니다.");
+                return false;
+            }
+
+            // POP3 서버에 연결
+            store.connect(host, userid, password);
+            status = true;
+        } catch (Exception ex) {
+            log.error("connectToStore 예외: {}", ex.getMessage(), ex);
+        }
+        return status;
     }
 
     // 공통된 메서드로 메시지를 가져오는 로직 처리
@@ -199,15 +240,15 @@ public class Pop3Agent {
         Message[] messages = null;
 
         if (!connectToStore()) {
-            log.error("POP3 connection failed!");
+            log.error(POP3_CONNECTION_FAILED);
             return "POP3 연결이 되지 않아 메일 목록을 볼 수 없습니다.";
         }
 
         try {
             Folder folder = store.getFolder(mailboxType);  // mailBoxType에 따라 다른 메일함을 열 수 있음
-            folder.open(Folder.READ_ONLY); 
+            folder.open(Folder.READ_ONLY);
 
-            messages = folder.getMessages(end,  start);
+            messages = folder.getMessages(end, start);
             FetchProfile fp = new FetchProfile();
             fp.add(FetchProfile.Item.ENVELOPE);
             folder.fetch(messages, fp);
@@ -260,8 +301,41 @@ public class Pop3Agent {
     public String getSendMail(int start, int end) {
         return getMessages(MAILBOX_INBOX, MessageFormatter.MailType.SENT_MAIL, start, end);
     }
-    
-    public String getMessageList(int start, int end){
+
+    public String getMessageList(int start, int end) {
         return getMessages(MAILBOX_INBOX, MessageFormatter.MailType.ALL_MAIL, start, end);
+    }
+
+    public String getSearchMail(String keyword) {
+        String mail = "";
+
+        String result = "";
+        Message[] messages = null;
+
+        if (!connectToStore()) {
+            log.error(POP3_CONNECTION_FAILED);
+            return "POP3 연결이 되지 않아 메일 목록을 볼 수 없습니다.";
+        }
+
+        try {
+            Folder folder = store.getFolder(MAILBOX_INBOX);  // mailBoxType에 따라 다른 메일함을 열 수 있음
+            folder.open(Folder.READ_ONLY);
+
+            messages = folder.getMessages();
+            FetchProfile fp = new FetchProfile();
+            fp.add(FetchProfile.Item.ENVELOPE);
+            folder.fetch(messages, fp);
+
+            MessageFormatter formatter = new MessageFormatter(userid);
+            mail = formatter.searchMail(messages, keyword, userid);
+
+            folder.close(true);  // 메일 폴더 닫기
+            store.close();       // POP3 연결 종료
+        } catch (Exception ex) {
+            log.error("Pop3Agent.getMessages() : exception = {}", ex.getMessage());
+            result = "Pop3Agent.getMessages() : exception = " + ex.getMessage();
+        }
+
+        return mail;
     }
 }

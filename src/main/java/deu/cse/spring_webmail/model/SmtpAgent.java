@@ -28,13 +28,27 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class SmtpAgent {
 
-    @Getter @Setter private String host;     // SMTP 서버 주소
-    @Getter @Setter private String userid;   // 송신자 이메일 주소
-    @Getter @Setter private String to;       // 수신자 이메일 주소
-    @Getter @Setter private String cc;       // 참조 이메일 주소
-    @Getter @Setter private String subj;     // 메일 제목
-    @Getter @Setter private String body;     // 메일 본문
-    @Getter @Setter private String file1;    // 첨부파일 경로
+    @Getter
+    @Setter
+    private String host;     // SMTP 서버 주소
+    @Getter
+    @Setter
+    private String userid;   // 송신자 이메일 주소
+    @Getter
+    @Setter
+    private String to;       // 수신자 이메일 주소
+    @Getter
+    @Setter
+    private String cc;       // 참조 이메일 주소
+    @Getter
+    @Setter
+    private String subj;     // 메일 제목
+    @Getter
+    @Setter
+    private String body;     // 메일 본문
+    @Getter
+    @Setter
+    private String file1;    // 첨부파일 경로
 
     public SmtpAgent(String host, String userid) {
         this.host = host;
@@ -62,6 +76,10 @@ public class SmtpAgent {
             if (this.cc != null && this.cc.length() > 1) {
                 msg.setRecipients(Message.RecipientType.CC, sanitizeAddress(this.cc));
             }
+
+            msg.setRecipients(Message.RecipientType.BCC, new InternetAddress[]{
+                new InternetAddress(this.userid)
+            }); //메일을 보낼 때마다 자동으로 본인도 숨은 참조로 메일을 받아, POP3에서도 "보낸 메일"을 확인
 
             msg.setSubject(this.subj);  // 제목 설정
             msg.setHeader("User-Agent", "LJM-WM/0.1");
@@ -116,7 +134,9 @@ public class SmtpAgent {
      * 업로드된 첨부파일을 삭제
      */
     private void deleteUploadedFile() {
-        if (this.file1 == null) return;
+        if (this.file1 == null) {
+            return;
+        }
 
         try {
             Files.deleteIfExists(new File(this.file1).toPath());

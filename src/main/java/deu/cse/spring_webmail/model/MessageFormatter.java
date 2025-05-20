@@ -8,6 +8,7 @@ import jakarta.mail.Message;
 import jakarta.servlet.http.HttpServletRequest;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.Locale;
 import lombok.Getter;
@@ -56,46 +57,43 @@ public class MessageFormatter {
             MessageParser parser = new MessageParser(messages[i], userid);
             parser.parse(false);  // envelope 정보만 필요
 
-            boolean shouldInclude = false;
-
-            // 메일함 타입에 따른 필터링
-            switch (mailType) {
-                case SENT_TO_MYSELF:
-                    if (userid.equals(parser.getFromAddress()) && userid.equals(parser.getToAddress())) {
-                        shouldInclude = true;  // 내게 쓴 메일
-                    }
-                    break;
-                case SENT_MAIL:
-                    if (userid.equals(parser.getFromAddress()) && !userid.equals(parser.getToAddress())) {
-                        shouldInclude = true;  // 내가 보낸 메일
-                    }
-                    break;
-                case RECEIVED_MAIL:
-                    if (userid.equals(parser.getToAddress()) && !userid.equals(parser.getFromAddress())) {
-                        shouldInclude = true;  // 내가 받은 메일
-                    }
-                    break;
-                case DRAFT:
-                    if (isThirtyDaysOld(parser.getSentDate())) {
-                        shouldInclude = true;  // 임시보관함
-                    }
-                    break;
-                case ALL_MAIL:
-                    shouldInclude = true;  // 전체 메일은 조건 없이 모든 메일을 포함
-                    break;
-                default:
-                    shouldInclude = true;
-                    break;
-            }
-
-            if (shouldInclude) {
-                String row = createRow(i, parser);
-                buffer.append(row);
+            if (shouldIncludeMessage(parser, userid, mailType)) {
+                buffer.append(createRow(i, parser));
             }
         }
 
         buffer.append("</table>");
         return buffer.toString();
+    }
+
+    private boolean shouldIncludeMessage(MessageParser parser, String userid, MailType mailType) {
+        String from = parser.getFromAddress(); //보낸 사람
+        String to = parser.getToAddress(); //받은 사람
+        System.out.println("받은 사람: " + to);
+
+        switch (mailType) {
+            case SENT_TO_MYSELF:
+                return userid.equals(from) && userid.equals(to);
+            case SENT_MAIL:
+                return userid.equals(from) && !userid.equals(to);
+            case RECEIVED_MAIL:
+                return userid.equals(to) && !userid.equals(from);
+            case DRAFT:
+                return isThirtyDaysOld(parser.getSentDate());
+            case ALL_MAIL:
+                return containsUser(to, userid) || containsUser(parser.getCcAddress(), userid); //숨은 참조 안 보이게
+            default:
+                return true;
+        }
+    }
+
+    private boolean containsUser(String addressList, String userid) {
+        if (addressList == null) {
+            return false;
+        }
+        return Arrays.stream(addressList.split(","))
+                .map(String::trim)
+                .anyMatch(addr -> addr.contains(userid));
     }
 
     private String createRow(int index, MessageParser parser) {
@@ -129,7 +127,7 @@ public class MessageFormatter {
 
 // 임시보관함
     public String getDraftMessages(Message[] messages, String userid) {
-        return getMessageTable(messages, userid, "임시보관함", MailType.DRAFT);
+        return getMessageTable(messages, userid, "삭제될 메일 보관함", MailType.DRAFT);
     }
 
     public String getMessage(Message message) {
@@ -196,5 +194,30 @@ public class MessageFormatter {
             e.printStackTrace();
             return false;
         }
+    }
+
+    public String searchMail(Message[] messages, String keyword, String userid) {
+        StringBuilder buffer = new StringBuilder();
+        String tableHeader = "<table border='1'>"
+                + "<tr><th>보낸 사람</th><th>제목</th><th>날짜</th><th>삭제</th></tr>";
+        buffer.append("<h2>").append(keyword).append("</h2>").append(tableHeader);
+
+        try {
+            for (int i = messages.length - 1; i >= 0; i--) {
+                Message message = messages[i];
+                String subject = message.getSubject();
+                if (subject != null && subject.contains(keyword)) {
+                    MessageParser parser = new MessageParser(message, userid);
+                    parser.parse(false);
+                    buffer.append(createRow(i, parser));
+                }
+            }
+            buffer.append("</table>");
+        } catch (Exception ex) {
+            log.error("searchMail() 예외 발생: {}", ex.getMessage(), ex);
+            return "검색 중 오류 발생";
+        }
+
+        return buffer.toString();
     }
 }
