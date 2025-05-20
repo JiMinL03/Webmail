@@ -25,18 +25,24 @@ public class AddrBook {
     @Column(nullable = false, length = 50)
     private String email;
     
-    @Column(nullable = false, length = 50)
+    @Column(name = "concat_email", nullable = false, length = 50)
     private String concatEmail;
+    
+    @Column(nullable = false, length = 20)
+    private String name;
+    
+    @Column(name = "phone_num", nullable = false, length = 20)
+    private String phoneNum;
     
     public AddrBook() {
     }
 
-    public AddrBook(String email, String concatEmail) {
+    public AddrBook(String email, String concatEmail, String name, String phoneNum) {
         this.email = email;
         this.concatEmail = concatEmail;
+        this.name = name;
+        this.phoneNum = phoneNum;
     }
-    
-    
 
     public Long getId() {
         return id;
@@ -48,6 +54,14 @@ public class AddrBook {
 
     public String getConcatEmail() {
         return concatEmail;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public String getPhoneNum() {
+        return phoneNum;
     }
     
 }

@@ -28,7 +28,13 @@
             <h2>주소록 추가</h2>
             <form method="post" action="addrbook/add">
                 <p>
-                    이메일: <input type="concatEmail" name="concatEmail" required />
+                    이름: <input type="text" name="name" required />
+                </p>
+                <p>
+                    전화번호: <input type="text" name="phoneNum" required />
+                </p>
+                <p>
+                    이메일: <input type="email" name="concatEmail" required />
                 </p>
                 <button type="submit">추가</button>
             </form>
@@ -40,6 +46,8 @@
             <table border="1">
                 <thead>
                 <tr>
+                    <th>이름</th>
+                    <th>전화번호</th>
                     <th>이메일</th>
                     <th>삭제</th>
                 </tr>
@@ -47,8 +55,9 @@
                 <tbody>
                 <c:forEach var="entry" items="${addrbookList}">
                     <tr>
-                                                <td>${entry.concatEmail}</td>
-                        
+                        <td>${entry.name}</td>
+                        <td>${entry.phoneNum}</td>
+                        <td>${entry.concatEmail}</td>
                         <td>
                             <form method="post" action="addrbook/delete">
                                 <input type="hidden" name="id" value="${entry.id}" />

@@ -39,7 +39,7 @@ public class AddrBookService {
         return addrBooks;
     }
     
-     public boolean saveAddr(String email, String concatEmail) {
+     public boolean saveAddr(String email, String concatEmail, String name, String phoneNum) {
         if (!isUserExists(concatEmail)) {
             log.warn("존재하지 않는 사용자: {}", concatEmail);
             return false;
@@ -50,8 +50,8 @@ public class AddrBookService {
             return false;
         }
 
-        addrBookRepository.save(new AddrBook(email, concatEmail));
-        return true;
+        addrBookRepository.save(new AddrBook(email, concatEmail, name, phoneNum));
+    return true;
     }
     
     public void deleteAddr(Long id){
