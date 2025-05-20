@@ -12,6 +12,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -28,8 +29,10 @@ import org.springframework.web.client.RestTemplate;
  */
 @Slf4j
 public class UserAdminAgent {
-
+    
+    
     private final RestTemplate restTemplate = new RestTemplate();
+    
 
     private String server;
     private int port;
@@ -71,11 +74,8 @@ public class UserAdminAgent {
     //   - true: addUser operation successful
     //   - false: addUser operation failed
     public boolean addUser(String userId, String password) {
-        
-        
 
-        String url = baseUrl + "/" + userId;
-
+        String url = getUserUrl(userId);
         
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
@@ -99,7 +99,7 @@ public class UserAdminAgent {
     
 
     public List<String> getUserList() {
-        String url = getBaseUrl(false);
+        String url = getBaseUrl();
         try {
             // 응답을 List<Map<String, String>> 형태로 받기
             ResponseEntity<List<Map<String, String>>> response = restTemplate.exchange(url, HttpMethod.GET, null, new ParameterizedTypeReference<List<Map<String, String>>>() {
@@ -157,7 +157,7 @@ public class UserAdminAgent {
     public boolean deleteUsers(String[] userList) {
         boolean allSuccess = true;
         for (String user : userList) {
-            String url = getBaseUrl(true) + user;
+            String url = getUserUrl(user);
             try {
                 restTemplate.delete(url);
                 log.info("Deleted user: {}", user);
@@ -170,7 +170,7 @@ public class UserAdminAgent {
     }
 
     public boolean verify(String userId) {
-        String url = getBaseUrl(true) +  userId;
+        String url = getUserUrl(userId);
         try {
             restTemplate.getForEntity(url, Void.class);
             return true; // 존재함
@@ -180,81 +180,8 @@ public class UserAdminAgent {
             log.error("Error verifying user {}: {}", userId, e.getMessage());
             return false;
         }
-        /*
-        boolean status = false;
-        byte[] messageBuffer = new byte[1024];
-
-        try {
-            // --> verify userid
-            String verifyCommand = "verify " + userid;
-            os.write(verifyCommand.getBytes());
-
-            // read the result for verify command
-            // <-- User userid exists   or
-            // <-- User userid does not exist
-            is.read(messageBuffer);
-            String recvMessage = new String(messageBuffer);
-            if (recvMessage.contains("exists")) {
-                status = true;
-            }
-
-            quit();  // quit command
-        } catch (IOException ex) {
-            log.error("verify(): 예외 = {}", ex.getMessage());
-        } finally {
-            return status;
-        }*/
     }
 
-    /*private boolean connect() {
-        byte[] messageBuffer = new byte[1024];
-        boolean returnVal = false;
-        String sendMessage;
-        String recvMessage;
-
-        log.info("connect() : root.id = {}, root.password = {}", ROOT_ID, ADMIN_PASSWORD);
-
-        // root 인증: id, passwd - default: root
-        // 1: Login Id message 수신
-        
-        try {
-        log.debug("Step 1: 서버로부터 로그인 메시지 수신 대기");
-        is.read(messageBuffer);
-        recvMessage = new String(messageBuffer);
-            System.out.println("receive message " + recvMessage + "123");
-        log.debug("받은 메시지: {}", recvMessage.trim());
-
-        log.debug("Step 2: root ID 전송");
-        sendMessage = ROOT_ID + EOL;
-        os.write(sendMessage.getBytes());
-
-        log.debug("Step 3: 비밀번호 입력 메시지 수신 대기");
-        Arrays.fill(messageBuffer, (byte) 0);
-        is.read(messageBuffer);
-
-        log.debug("Step 4: root PASSWORD 전송");
-        sendMessage = ADMIN_PASSWORD + EOL;
-        os.write(sendMessage.getBytes());
-
-        log.debug("Step 5: Welcome 메시지 수신 대기");
-        Arrays.fill(messageBuffer, (byte) 0);
-        is.read(messageBuffer);
-        recvMessage = new String(messageBuffer);
-        log.debug("받은 메시지: {}", recvMessage.trim());
-        
-        if (recvMessage.contains("Welcome")) {
-        System.out.println("connect true");
-        returnVal = true;
-         } else {
-        System.out.println("connect false");
-         }
-        } catch (Exception e) {
-        log.error("connect() 예외 발생", e);
-         }
-
-
-        return returnVal;
-    }  // connect()*/
     public boolean quit() {
         byte[] messageBuffer = new byte[1024];
         boolean status = false;
@@ -281,7 +208,10 @@ public class UserAdminAgent {
         
     }
     
-    private String getBaseUrl(boolean withSlash) {
-    return withSlash ? baseUrl + "/" : baseUrl;
+    private String getBaseUrl() {
+    return baseUrl;
 }
+    private String getUserUrl(String userId){
+        return baseUrl+"/"+userId;
+    }
 }
