@@ -29,10 +29,6 @@ import org.springframework.web.client.RestTemplate;
  */
 @Slf4j
 public class UserAdminAgent {
-    
-    
-    private final RestTemplate restTemplate = new RestTemplate();
-    
 
     private String server;
     private int port;
@@ -40,17 +36,15 @@ public class UserAdminAgent {
     InputStream is = null;
     OutputStream os = null;
     boolean isConnected = false;
-
     private String ADMIN_PASSWORD;
     private String ADMIN_ID;
     // private final String EOL = "\n";
     private final String EOL = "\r\n";
 
     private final String baseUrl = "http://localhost:8000/users";
+    private final RestTemplate restTemplate = new RestTemplate();
 
-    public UserAdminAgent() {
-    }
-
+  
     public UserAdminAgent(String server, int port,
             String admin_pass, String admin_id) {
         log.debug("UserAdminAgent created: server = " + server + ", port = " + port);
@@ -59,20 +53,11 @@ public class UserAdminAgent {
 
         this.ADMIN_PASSWORD = admin_pass;
         this.ADMIN_ID = admin_id;
+        
 
         log.debug("isConnected = {}, root.id = {}", isConnected, ADMIN_ID);
     }
 
-    /**
-     *
-     * @param userId
-     * @param password
-     * @return a boolean value as follows: - true: addUser operation successful
-     * - false: addUser operation failed
-     */
-    // return value:
-    //   - true: addUser operation successful
-    //   - false: addUser operation failed
     public boolean addUser(String userId, String password) {
 
         String url = getUserUrl(userId);
@@ -154,6 +139,7 @@ public class UserAdminAgent {
         return userList;
     } // parseUserList()
 
+    
     public boolean deleteUsers(String[] userList) {
         boolean allSuccess = true;
         for (String user : userList) {
@@ -181,7 +167,6 @@ public class UserAdminAgent {
             return false;
         }
     }
-
     public boolean quit() {
         byte[] messageBuffer = new byte[1024];
         boolean status = false;
@@ -206,6 +191,60 @@ public class UserAdminAgent {
         } 
             return status;
         
+    }// 도메인 목록
+    public List<String> getDomainList() {
+        String url = String.format("http://%s:%d/domains", server, port);
+        try {
+            ResponseEntity<List<String>> response = restTemplate.exchange(url, HttpMethod.GET, null, new ParameterizedTypeReference<List<String>>() {});
+            List<String> domainList = response.getBody();
+            
+            if (domainList == null) {
+                log.info("도메인 목록이 비어 있습니다.");
+                return new LinkedList<>();
+            }
+            return domainList;
+        }
+        catch (Exception e) {
+            log.error("도메인 목록 가져오기 실패 : {}", e.getMessage());
+            return new LinkedList<>();
+        }
+    }
+    
+
+    // 도메인 추가
+    public boolean addDomain(String domain){
+        String url = String.format("http://%s:%d/domains/%s", server, port, domain);
+        
+        try {
+            restTemplate.put(url,null);
+            log.info("도메인 등록 성공: {}", domain);
+            return true;
+        }
+        catch (HttpClientErrorException e){
+            log.error("도메인 등록 실패: {} {} {}", domain, e.getStatusCode(), e.getResponseBodyAsString());
+        }
+        catch (Exception e){
+            log.error("도메인 등록 중 예외 발생 {}", e.toString());
+        }
+        return false;
+    }
+    
+    // 도메인 삭제
+    public boolean deleteDomain(String [] domainList) {
+        boolean success = true;
+        
+        for (String domain : domainList) {
+            try {
+                String url = String.format("http://%s:%d/domains/%s", server, port, domain);
+                restTemplate.delete(url);
+                log.info("도메인 삭제: {}", domain);
+            }
+            catch (Exception e) {
+                log.error("도메인 삭제 중 예외 발생 {}", e.toString());
+                success = false;
+            }
+        }
+        return success;
     }
     
     private String getBaseUrl() {
@@ -213,5 +252,6 @@ public class UserAdminAgent {
 }
     private String getUserUrl(String userId){
         return baseUrl+"/"+userId;
+
     }
 }

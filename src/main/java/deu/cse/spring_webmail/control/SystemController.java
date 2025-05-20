@@ -28,6 +28,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.client.RestTemplate;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 /**
@@ -46,6 +47,8 @@ public class SystemController {
     private HttpSession session;
     @Autowired
     private HttpServletRequest request;
+    
+    private RestTemplate restTemplate = new RestTemplate();
 
     @Value("${admin.password}")
     private String ADMIN_PASSWORD;
@@ -135,7 +138,7 @@ public class SystemController {
         return status;
     }
     
-     @GetMapping("/admin_menu")
+    @GetMapping("/admin_menu")
     public String adminMenu(Model model) {
         String userid = (String) session.getAttribute(SESSION_USERID);
 
@@ -149,35 +152,94 @@ public class SystemController {
         model.addAttribute("userList", getUserList());
         return "admin/admin_menu";
     }
+    
 
-     @GetMapping("/add_user")
+    // 도메인 메뉴 (도메인 목록 보여주기)
+    @GetMapping("/domain_menu")
+    public String domainManage(Model model) {
+        UserAdminAgent domain = new UserAdminAgent(JAMES_HOST, JAMES_CONTROL_PORT,
+                    ADMIN_PASSWORD, ADMINISTRATOR);
+        List<String> domainList = domain.getDomainList();
+        model.addAttribute("domainList", domainList);
+        return "admin/domain/domain_menu";
+    }
+    
+    // 도메인 추가
+    @GetMapping("/add_domain")
+    public String addDomain() {
+        return "admin/domain/add_domain";
+    }
+    
+    @PostMapping("/add_domain.do")
+    public String addDomainDo(@RequestParam("domain") String domainName, RedirectAttributes attrs) {
+        UserAdminAgent domain = new UserAdminAgent(JAMES_HOST, JAMES_CONTROL_PORT,
+                    ADMIN_PASSWORD, ADMINISTRATOR);
+        boolean success = domain.addDomain(domainName);
+        if (success) {
+            attrs.addFlashAttribute("msg", "도메인 등록 성공");
+        }
+        else {
+            attrs.addFlashAttribute("msg", "도메인 등록 실패");
+        }
+        return "redirect:/domain_menu";
+    }
+    
+    // 도메인 삭제 => 삭제할 도메인 목록 보여주기
+    @GetMapping("/delete_domain")
+    public String deleteDomain(Model model) {
+        UserAdminAgent domain = new UserAdminAgent(JAMES_HOST, JAMES_CONTROL_PORT,
+                    ADMIN_PASSWORD, ADMINISTRATOR);
+        List<String> domainList = domain.getDomainList();
+        model.addAttribute("domainList", domainList);
+        return "admin/domain/delete_domain";
+    }
+    
+    @PostMapping("/delete_domain.do")
+    public String deleteDomainDo(@RequestParam("domain") String[] domainList, RedirectAttributes attrs) {
+        UserAdminAgent domain = new UserAdminAgent(JAMES_HOST, JAMES_CONTROL_PORT,
+                    ADMIN_PASSWORD, ADMINISTRATOR);
+        boolean success = domain.deleteDomain(domainList);
+        if (success) {
+            attrs.addFlashAttribute("msg", "도메인 삭제 성공");
+        }
+        else {
+            attrs.addFlashAttribute("msg", "도메인 삭제 실패");
+        }
+        return "redirect:/domain_menu";
+    }
+
+    // 사용자 회원가입
+    @GetMapping("/sign_up")
     public String addUser() {
-        return "admin/add_user";
+        return "admin/sign_up_user";
     }
 
     @PostMapping("/add_user.do")
-    public String addUserDo(@RequestParam String id, @RequestParam String password,
+    public String addUserDo(@RequestParam String id, @RequestParam String password,@RequestParam String confirmPassword, Model model,
             RedirectAttributes attrs) {
-        log.debug("add_user.do: id = {}, password = {}, port = {}",
-                id, password, JAMES_CONTROL_PORT);
+        
+        if (!password.equals(confirmPassword)) {
+            model.addAttribute("msg", "비밀번호와 비밀번호 확인이 다릅니다. 다시 입력해주세요");
+            return "admin/sign_up_user";
+        }
 
         try {
 
             UserAdminAgent agent = new UserAdminAgent(JAMES_HOST, JAMES_CONTROL_PORT,
                     ADMIN_PASSWORD, ADMINISTRATOR);
 
-            // if (addUser successful)  사용자 등록 성공 팦업창
+            // if (addUser successful)  사용자 등록 성공 팝업창
             // else 사용자 등록 실패 팝업창
             if (agent.addUser(id, password)) {
-                attrs.addFlashAttribute("msg", String.format("사용자(%s) 추가를 성공하였습니다.", id));
+                attrs.addFlashAttribute("msg", String.format("사용자 회원가입(%s) 추가를 성공하였습니다.", id));
             } else {
-                attrs.addFlashAttribute("msg", String.format("사용자(%s) 추가를 실패하였습니다.", id));
+                attrs.addFlashAttribute("msg", String.format("사용자 회원가입(%s) 추가를 실패하였습니다.", id));
             }
         } catch (Exception ex) {
             log.error("add_user.do: 시스템 접속에 실패했습니다. 예외 = {}", ex.getMessage());
         }
 
-        return REDIRECT_ADMIN_MENU;
+        return "index";
     }
 
     @GetMapping("/delete_user")
@@ -225,7 +287,7 @@ public class SystemController {
     public String imgTest() {
         return "img_test/img_test";
     }
-
+    
     /**
      * https://34codefactory.wordpress.com/2019/06/16/how-to-display-image-in-jsp-using-spring-code-factory/
      *
@@ -264,5 +326,5 @@ public class SystemController {
         }
         return null;
     }
-
+    
 }
