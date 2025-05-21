@@ -15,6 +15,7 @@ import javax.imageio.ImageIO;
 import jakarta.servlet.ServletContext;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
+import java.util.ArrayList;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -153,14 +154,19 @@ public class SystemController {
         return "admin/admin_menu";
     }
     
+    // 도메인 목록 보여주는 메서드 ( 재사용 많이 하는거라서 메서드로 따로 뺌 )
+    private void domainListModel(Model model) {
+        UserAdminAgent agent = new UserAdminAgent(JAMES_HOST, JAMES_CONTROL_PORT,
+                    ADMIN_PASSWORD, ADMINISTRATOR);
+        List<String> domainList = agent.getDomainList();
+        model.addAttribute("domainList", domainList);
+    }
 
+    
     // 도메인 메뉴 (도메인 목록 보여주기)
     @GetMapping("/domain_menu")
     public String domainManage(Model model) {
-        UserAdminAgent domain = new UserAdminAgent(JAMES_HOST, JAMES_CONTROL_PORT,
-                    ADMIN_PASSWORD, ADMINISTRATOR);
-        List<String> domainList = domain.getDomainList();
-        model.addAttribute("domainList", domainList);
+        domainListModel(model);
         return "admin/domain/domain_menu";
     }
     
@@ -172,9 +178,9 @@ public class SystemController {
     
     @PostMapping("/add_domain.do")
     public String addDomainDo(@RequestParam("domain") String domainName, RedirectAttributes attrs) {
-        UserAdminAgent domain = new UserAdminAgent(JAMES_HOST, JAMES_CONTROL_PORT,
+        UserAdminAgent agent = new UserAdminAgent(JAMES_HOST, JAMES_CONTROL_PORT,
                     ADMIN_PASSWORD, ADMINISTRATOR);
-        boolean success = domain.addDomain(domainName);
+        boolean success = agent.addDomain(domainName);
         if (success) {
             attrs.addFlashAttribute("msg", "도메인 등록 성공");
         }
@@ -187,18 +193,30 @@ public class SystemController {
     // 도메인 삭제 => 삭제할 도메인 목록 보여주기
     @GetMapping("/delete_domain")
     public String deleteDomain(Model model) {
-        UserAdminAgent domain = new UserAdminAgent(JAMES_HOST, JAMES_CONTROL_PORT,
-                    ADMIN_PASSWORD, ADMINISTRATOR);
-        List<String> domainList = domain.getDomainList();
-        model.addAttribute("domainList", domainList);
+        domainListModel(model);
         return "admin/domain/delete_domain";
     }
     
     @PostMapping("/delete_domain.do")
     public String deleteDomainDo(@RequestParam("domain") String[] domainList, RedirectAttributes attrs) {
-        UserAdminAgent domain = new UserAdminAgent(JAMES_HOST, JAMES_CONTROL_PORT,
+        UserAdminAgent agent = new UserAdminAgent(JAMES_HOST, JAMES_CONTROL_PORT,
                     ADMIN_PASSWORD, ADMINISTRATOR);
-        boolean success = domain.deleteDomain(domainList);
+        
+        // 삭제할 수 없는 도메인 보관
+        List<String> blocked = new ArrayList<>();
+        
+        for(String domain : domainList) {
+            if (agent.domainUse(domain)) {
+                blocked.add(domain);
+            }
+        }
+        
+        if (!blocked.isEmpty()) {
+            attrs.addFlashAttribute("msg", "사용자가 사용하고 있는 도메인입니다. 삭제하실 수 없습니다.");
+            return "redirect:/domain_menu";
+        }
+        
+        boolean success = agent.deleteDomain(domainList);
         if (success) {
             attrs.addFlashAttribute("msg", "도메인 삭제 성공");
         }
@@ -210,33 +228,57 @@ public class SystemController {
 
     // 사용자 회원가입
     @GetMapping("/sign_up")
-    public String addUser() {
+    public String addUser(Model model) {
+        UserAdminAgent agent = new UserAdminAgent(JAMES_HOST, JAMES_CONTROL_PORT,
+                    ADMIN_PASSWORD, ADMINISTRATOR);
+        List<String> domainList = agent.getDomainList();
+        model.addAttribute("domainList", domainList);
         return "admin/sign_up_user";
     }
 
     @PostMapping("/add_user.do")
-    public String addUserDo(@RequestParam String id, @RequestParam String password,@RequestParam String confirmPassword, Model model,
+    public String addUserDo(@RequestParam String id, @RequestParam String password,@RequestParam String confirmPassword, @RequestParam String domain, Model model,
             RedirectAttributes attrs) {
         
-        if (!password.equals(confirmPassword)) {
-            model.addAttribute("msg", "비밀번호와 비밀번호 확인이 다릅니다. 다시 입력해주세요");
+        // 모든 항목 입력 완료했는지 검사
+        if (id == null || id.isBlank()|| domain == null || domain.isBlank() || password == null || password.isBlank() || confirmPassword == null || confirmPassword.isBlank()) {
+            model.addAttribute("msg", "항목 중 하나가 입력/선택이 되어있지 않습니다. 다시 입력해주시기 바랍니다.");
+            domainListModel(model);
             return "admin/sign_up_user";
         }
+        
+        // 비밀번호 검증
+        if (!password.equals(confirmPassword)) {
+            model.addAttribute("msg", "비밀번호와 비밀번호 확인이 다릅니다. 다시 입력해주세요");
+            domainListModel(model);
+            return "admin/sign_up_user";
+        }
+        
+        String fullId = id + "@" + domain;
 
         try {
 
             UserAdminAgent agent = new UserAdminAgent(JAMES_HOST, JAMES_CONTROL_PORT,
                     ADMIN_PASSWORD, ADMINISTRATOR);
 
-            // if (addUser successful)  사용자 등록 성공 팝업창
-            // else 사용자 등록 실패 팝업창
-            if (agent.addUser(id, password)) {
-                attrs.addFlashAttribute("msg", String.format("사용자 회원가입(%s) 추가를 성공하였습니다.", id));
-            } else {
-                attrs.addFlashAttribute("msg", String.format("사용자 회원가입(%s) 추가를 실패하였습니다.", id));
+            // 중복 가입자 확인
+            if (agent.existUser(fullId)){
+                model.addAttribute("msg", "이미 가입되어 있는 계정입니다.");
+                return "index";
+            }
+            
+            // 사용자 등록
+            if (agent.addUser(fullId, password)) {
+                attrs.addFlashAttribute("msg", String.format("사용자 회원가입(%s) 추가를 성공하였습니다.", fullId));
+                return "redirect:/";
+            }
+            else {
+                attrs.addFlashAttribute("msg", String.format("사용자 회원가입(%s) 추가를 실패하였습니다.", fullId));
+                return "redirect:/";
             }
         } catch (Exception ex) {
             log.error("add_user.do: 시스템 접속에 실패했습니다. 예외 = {}", ex.getMessage());
+            
         }
 
         return "index";

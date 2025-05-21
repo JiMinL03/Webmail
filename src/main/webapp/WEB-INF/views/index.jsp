@@ -21,12 +21,11 @@
         
         
         <script>
-            <c:if test="${not empty msg}">
+            <c:if test="${!empty msg}">
                 alert("${msg}");
             </c:if>
         </script>
-
-
+        
         <div id="login_form">
             <form method="POST" action="login.do?menu=<%= CommandType.LOGIN %>">
                 사용자: <input type="text" name="userid" size="20" autofocus> <br />

@@ -69,14 +69,33 @@ public class UserAdminAgent {
         HttpEntity<String> request = new HttpEntity<>(jsonBody, headers);
 
         try {
-            ResponseEntity<Void> response = restTemplate.exchange(
-                    url, HttpMethod.PUT, request, Void.class);
+            ResponseEntity<String> response = restTemplate.exchange(
+                    url, HttpMethod.PUT, request, String.class);
             log.info("Response Status Code: {}", response.getStatusCode());
             return response.getStatusCode() == HttpStatus.NO_CONTENT;
-        } catch (HttpClientErrorException e) {
+        }
+        catch (HttpClientErrorException e) {
             log.error("HTTP error when adding user {}: {} - Body: {}",
                     userId, e.getStatusCode(), e.getResponseBodyAsString());
-        } catch (Exception e) {
+        }
+        catch (Exception e) {
+            log.error("Unexpected error adding user {}: {}", userId, e.toString());
+        }
+        return false;
+    }
+    
+    // 이미 유저가 가입된 계정일 때
+    public boolean existUser(String userId) {
+        String url = getUserUrl(userId);
+        try {
+            ResponseEntity<String> response = restTemplate.exchange(
+                    url, HttpMethod.PUT, null, String.class);
+            return response.getStatusCode() == HttpStatus.OK; 
+        }
+        catch(HttpClientErrorException e) {
+            return false;
+        }
+        catch (Exception e) {
             log.error("Unexpected error adding user {}: {}", userId, e.toString());
         }
         return false;
@@ -225,6 +244,22 @@ public class UserAdminAgent {
         }
         catch (Exception e){
             log.error("도메인 등록 중 예외 발생 {}", e.toString());
+        }
+        return false;
+    }
+    
+    // 도메인을 사용자가 사용하고 있는지 검사
+    public boolean domainUse(String domain) {
+        try {
+            List<String> userList = getUserList();
+            for (String user : userList) {
+                if (user.endsWith("@" + domain)) {
+                    return true;
+                }
+            }
+        }
+        catch (Exception e) {
+            log.error("도메인 예외 발생 : {}" , e.toString());
         }
         return false;
     }
