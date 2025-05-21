@@ -171,6 +171,10 @@ a:hover {
     background-color: #28a745;
     color: white;
 }
+<<<<<<< HEAD
+
+=======
+>>>>>>> f8bdb943890e336c8d00ef84fc5ef4738910de9e
 /* search.css */
 
 /* 검색창 스타일 */
@@ -209,4 +213,8 @@ a:hover {
 
 .search-container button:hover {
     background-color: #45a049;
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> f8bdb943890e336c8d00ef84fc5ef4738910de9e

@@ -21,8 +21,8 @@
         <p><a href="UserAdmin.do?select=<%= CommandType.ADD_USER_MENU %>">사용자 추가</a></p>
         <p><a href="UserAdmin.do?select=<%= CommandType.DELETE_USER_MENU %>">사용자 제거</a></p>
         --%>
-        <p><a href="add_user">사용자 추가</a> </p>
         <p><a href="delete_user"> 사용자 제거</a> </p>
+        <p><a href="domain_menu">도메인 관리</a> </p>
         <p><a href="login.do?menu=<%= CommandType.LOGOUT %>">로그아웃</a></p>
     </body>
 </html>

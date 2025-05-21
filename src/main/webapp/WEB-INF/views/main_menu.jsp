@@ -27,7 +27,12 @@
         <link type="text/css" rel="stylesheet" href="css/main_style.css" />
         <script>
             <c:if test="${!empty msg}">
-            alert("${msg}");
+                if (confirm("${msg}")) {
+                    // 창 그대로 이동
+                }
+                else {
+                    location.href = "${pageContext.request.contextPath}/";
+                }
             </c:if>
         </script>
     </head>
