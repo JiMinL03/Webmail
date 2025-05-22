@@ -49,7 +49,7 @@ public class SystemController {
     @Autowired
     private HttpServletRequest request;
     
-    private RestTemplate restTemplate = new RestTemplate();
+    //private RestTemplate restTemplate = new RestTemplate();
 
     @Value("${admin.password}")
     private String ADMIN_PASSWORD;
@@ -62,6 +62,10 @@ public class SystemController {
     
     private static final String REDIRECT_ADMIN_MENU = "redirect:/admin_menu";
     private static final String SESSION_USERID = "userid";
+    
+    private static final String REDIRECT_ROOT = "redirect:/";
+    private static final String REDIRECT_DOMAIN_ROOT = "redirect:/domain_menu";
+    private static final String SIGNUP_USER_ROOT = "redirect:/admin/sign_up_user";
 
     @GetMapping("/")
     public String index() {
@@ -82,41 +86,31 @@ public class SystemController {
                 String host = (String) request.getSession().getAttribute("host");
                 String userid = request.getParameter(SESSION_USERID);
                 String password = request.getParameter("passwd");
-                
-                // Pop3Agent 모델 클래스를 이용해서 로그인 정보가 유효한지 확인하라
-                // Pop3Agent 모델 클래스에서 로그인 유효성 검사를 실시해라
-
+             
                 Pop3Agent pop3Agent = new Pop3Agent(host, userid, password);
                 boolean isLoginSuccess = pop3Agent.validate();
                 
-                // Now call the correct page according to its validation result.
                 if (isLoginSuccess) {                 
                     if (isAdmin(userid)) {
-                        // HttpSession 객체에 userid를 등록해 둔다.
                         session.setAttribute(SESSION_USERID, userid);
-                        attrs.addFlashAttribute("msg", "관리자 로그인이 맞습니까?"); // [변경 부분]
-                        // response.sendRedirect("admin_menu.jsp");
+                        attrs.addFlashAttribute("msg", "관리자 로그인이 맞습니까?");
                         url = REDIRECT_ADMIN_MENU; // admin_menu.jsp 이동
                     }
                     else{
-                        // HttpSession 객체에 userid와 password를 등록해 둔다.
                         session.setAttribute(SESSION_USERID, userid);
                         session.setAttribute("password", password);
-                        // response.sendRedirect("main_menu.jsp");
                         attrs.addFlashAttribute("msg", "사용자 로그인이 맞습니까?"); // [변경 부분]
                         url = "redirect:/main_menu";  // URL이 http://localhost:8080/webmail/main_menu 이와 같이 됨. // main_menu.jsp로 이동
                         // url = "/main_menu";  // URL이 http://localhost:8080/webmail/login.do?menu=91 이와 같이 되어 안 좋음
                     
                 }} else {
-                    // RequestDispatcher view = request.getRequestDispatcher("login_fail.jsp");
-                    // view.forward(request, response);
                     url = "redirect:/login_fail";
                 }
                 break;
                 
             case CommandType.LOGOUT: // 로그아웃 요청
                 session.invalidate(); // 현재 세션 무효화
-                url = "redirect:/";  // redirect: 반드시 넣어야만 컨텍스트 루트로 갈 수 있음 => "/webmail"로 이동
+                url = REDIRECT_ROOT;  // redirect: 반드시 넣어야만 컨텍스트 루트로 갈 수 있음 => "/webmail"로 이동
                 break;
             default:
                 break;
@@ -187,7 +181,7 @@ public class SystemController {
         else {
             attrs.addFlashAttribute("msg", "도메인 등록 실패");
         }
-        return "redirect:/domain_menu";
+        return REDIRECT_DOMAIN_ROOT;
     }
     
     // 도메인 삭제 => 삭제할 도메인 목록 보여주기
@@ -213,7 +207,7 @@ public class SystemController {
         
         if (!blocked.isEmpty()) {
             attrs.addFlashAttribute("msg", "사용자가 사용하고 있는 도메인입니다. 삭제하실 수 없습니다.");
-            return "redirect:/domain_menu";
+            return REDIRECT_DOMAIN_ROOT;
         }
         
         boolean success = agent.deleteDomain(domainList);
@@ -223,7 +217,7 @@ public class SystemController {
         else {
             attrs.addFlashAttribute("msg", "도메인 삭제 실패");
         }
-        return "redirect:/domain_menu";
+        return REDIRECT_DOMAIN_ROOT;
     }
 
     // 사용자 회원가입
@@ -244,14 +238,14 @@ public class SystemController {
         if (id == null || id.isBlank()|| domain == null || domain.isBlank() || password == null || password.isBlank() || confirmPassword == null || confirmPassword.isBlank()) {
             model.addAttribute("msg", "항목 중 하나가 입력/선택이 되어있지 않습니다. 다시 입력해주시기 바랍니다.");
             domainListModel(model);
-            return "admin/sign_up_user";
+            return SIGNUP_USER_ROOT;
         }
         
         // 비밀번호 검증
         if (!password.equals(confirmPassword)) {
             model.addAttribute("msg", "비밀번호와 비밀번호 확인이 다릅니다. 다시 입력해주세요");
             domainListModel(model);
-            return "admin/sign_up_user";
+            return SIGNUP_USER_ROOT;
         }
         
         String fullId = id + "@" + domain;
@@ -270,11 +264,11 @@ public class SystemController {
             // 사용자 등록
             if (agent.addUser(fullId, password)) {
                 attrs.addFlashAttribute("msg", String.format("사용자 회원가입(%s) 추가를 성공하였습니다.", fullId));
-                return "redirect:/";
+                return REDIRECT_ROOT;
             }
             else {
                 attrs.addFlashAttribute("msg", String.format("사용자 회원가입(%s) 추가를 실패하였습니다.", fullId));
-                return "redirect:/";
+                return REDIRECT_ROOT;
             }
         } catch (Exception ex) {
             log.error("add_user.do: 시스템 접속에 실패했습니다. 예외 = {}", ex.getMessage());
