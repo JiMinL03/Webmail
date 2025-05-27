@@ -28,16 +28,25 @@
                 <table border="0" align="left">
                     <tr>
                         <td>ID</td>
-                        <td> <input type="text" name="id" value="" size="20" />  </td>
+                        <td>
+                            <input type="text" name="id" value="" size="20" required/>
+                            @
+                            <select name="domain" required>
+                                <option value="" disabled selected>-------</option>
+                                <c:forEach var="domain" items="${domainList}">
+                                    <option value="${domain}">${domain}</option>
+                                </c:forEach>
+                            </select>
+                        </td>
                     </tr>
                     <tr>
                         <td>비밀번호</td>
-                        <td> <input type="password" name="password" value="" /> </td>
+                        <td> <input type="password" name="password" value="" required/> </td>
                     </tr>
                     <tr>
                         <td>비밀번호 확인</td>
                         <td>
-                            <input type="password" name="confirmPassword" value="" />
+                            <input type="password" name="confirmPassword" value="" required/>
                         </td>
                     </tr>
                     <tr>
@@ -45,11 +54,9 @@
                             <input type="submit" value="회원가입" name="register" />
                             <input type="reset" value="초기화" name="reset" />
                             <button type="button" onclick="history.back();">뒤로 가기</button>
-                            
                         </td>
                     </tr>
                 </table>
-
             </form>
         </div>
 

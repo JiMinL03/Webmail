@@ -6,7 +6,7 @@
 
 <%@page contentType="text/html" pageEncoding="UTF-8"%>
 <!DOCTYPE html>
-<html>
+<html lang="ko">
     <head>
         <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
         <title>도메인 관리 화면</title>
@@ -25,7 +25,7 @@
             <form name="AddDoamin" action="add_domain.do" method="POST">
                 <table border="0" align="left">
                     <tr>
-                        <td>도메인</td>
+                        <th scope="row">도메인</th>
                         <td> <input type="text" name="domain" value="" /> </td>
                     </tr>
                     <tr>

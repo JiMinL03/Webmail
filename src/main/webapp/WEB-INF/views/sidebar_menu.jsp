@@ -20,12 +20,22 @@
         <p><a href="main_menu">전체 메일</a>
             <span class="total-count">${totalCount}</span>
         </p>
+<<<<<<< HEAD
         <p> <a href="addrbook"> 주소록 </a> </p>
         <p> <a href="send_mail"> 내가 보낸 메일 </a> </p>
         <p> <a href="received_mail"> 내가 받은 메일 </a> </p>
         <p> <a href="my_mail"> 내게 쓴 메일 </a> </p>
         <p> <a href="mail_box"> 임시보관함 </a> </p>
         <p> <a href="write_mail"> 메일 쓰기 </a> </p>
+=======
+        <p><a href="send_mail"> 내가 보낸 메일 </a></p>
+        <p><a href="received_mail"> 내가 받은 메일 </a></p>
+        <p><a href="my_mail"> 내게 쓴 메일 </a></p>
+        <p><a href="mail_box"> 삭제될 메일보관 </a></p>
+        <p><a href="write_mail"> 메일 쓰기 </a></p>
+
+        <!-- 로그아웃 링크 -->
+>>>>>>> f8bdb943890e336c8d00ef84fc5ef4738910de9e
         <p><a href="login.do?menu=<%= CommandType.LOGOUT %>">로그아웃</a></p>
 
     </body>

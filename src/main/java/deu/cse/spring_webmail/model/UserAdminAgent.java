@@ -3,17 +3,10 @@
  * and open the template in the editor.
  */
 package deu.cse.spring_webmail.model;
-
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.net.Socket;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -32,23 +25,21 @@ import org.springframework.web.client.RestTemplate;
 @Slf4j
 @Component
 public class UserAdminAgent {
-    @Value("${user.base-url}")
-    private String baseUrl;
 
     private String server;
     private int port;
-    boolean isConnected = false;
-    private String ADMIN_PASSWORD;
-    private String ADMIN_ID;
     private final RestTemplate restTemplate = new RestTemplate();
+    private final String baseUrl = "http://localhost:8000/users";
 
-  
-    public UserAdminAgent() { }
+    public UserAdminAgent(String server, int port) {
+        this.server = server;
+        this.port = port;
+    }
 
     public boolean addUser(String userId, String password) {
 
         String url = getUserUrl(userId);
-        
+
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
 
@@ -56,19 +47,27 @@ public class UserAdminAgent {
         HttpEntity<String> request = new HttpEntity<>(jsonBody, headers);
 
         try {
-            ResponseEntity<Void> response = restTemplate.exchange(
-                    url, HttpMethod.PUT, request, Void.class);
+            ResponseEntity<String> response = restTemplate.exchange(
+                    url, HttpMethod.PUT, request, String.class);
             log.info("Response Status Code: {}", response.getStatusCode());
             return response.getStatusCode() == HttpStatus.NO_CONTENT;
         } catch (HttpClientErrorException e) {
-            log.error("HTTP error when adding user {}: {} - Body: {}",
-                    userId, e.getStatusCode(), e.getResponseBodyAsString());
+            log.error("HTTP 에러 발생");
         } catch (Exception e) {
-            log.error("Unexpected error adding user {}: {}", userId, e.toString());
+            log.error("에러 발생 {}:", e.toString());
         }
         return false;
     }
-    
+
+    // 이미 유저가 가입된 계정일 때
+    public boolean existUser(String userId) {
+        try {
+            List<String> userList = getUserList();
+            return userList.contains(userId);
+        } catch (Exception e) {
+            return false;
+        }
+    }
 
     public List<String> getUserList() {
         String url = getBaseUrl();
@@ -95,11 +94,11 @@ public class UserAdminAgent {
             users.sort(String::compareTo);  // 알파벳 순으로 정렬
             return users;
         } catch (Exception e) {
-            log.error("Error fetching user list", e);
+            log.error("list에러 발생", e);
             return new LinkedList<>();
         }
     }
-    
+
     public boolean deleteUsers(String[] userList) {
         boolean allSuccess = true;
         for (String user : userList) {
@@ -127,66 +126,94 @@ public class UserAdminAgent {
             return false;
         }
     }
-    
+
     public List<String> getDomainList() {
         String url = String.format("http://%s:%d/domains", server, port);
         try {
-            ResponseEntity<List<String>> response = restTemplate.exchange(url, HttpMethod.GET, null, new ParameterizedTypeReference<List<String>>() {});
+            ResponseEntity<List<String>> response = restTemplate.exchange(url, HttpMethod.GET, null, new ParameterizedTypeReference<List<String>>() {
+            });
             List<String> domainList = response.getBody();
-            
-            if (domainList == null) {
-                log.info("도메인 목록이 비어 있습니다.");
-                return new LinkedList<>();
+
+            if (domainList == null) { // 도메인 목록이 존재하지 않을 때
+                return new LinkedList<>(); // null이 아닌 비어있는 리스트 전달
             }
             return domainList;
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             log.error("도메인 목록 가져오기 실패 : {}", e.getMessage());
             return new LinkedList<>();
         }
     }
-    
 
     // 도메인 추가
-    public boolean addDomain(String domain){
+    public String addDomain(String domain) {
         String url = String.format("http://%s:%d/domains/%s", server, port, domain);
-        
+
+        // 이미 등록된 도메인인 경우
+        List<String> domainList = getDomainList();
+        if (domainList.contains(domain)) {
+            log.info("이미 등록된 도메인입니다. : {}", domain);
+            return "이미 등록된 도메인입니다.";
+        }
+
         try {
-            restTemplate.put(url,null);
+            restTemplate.put(url, null);
             log.info("도메인 등록 성공: {}", domain);
-            return true;
-        }
-        catch (HttpClientErrorException e){
+            return "도메인 등록 성공";
+        } catch (HttpClientErrorException e) {
             log.error("도메인 등록 실패: {} {} {}", domain, e.getStatusCode(), e.getResponseBodyAsString());
-        }
-        catch (Exception e){
+            return "도메인 등록 실패";
+        } catch (Exception e) {
             log.error("도메인 등록 중 예외 발생 {}", e.toString());
+            return "도메인 등록 중 오류 발생";
+        }
+    }
+
+    // 도메인을 사용자가 사용하고 있는지 검사
+    public boolean domainUse(String domain) {
+        try {
+            List<String> userList = getUserList();
+            for (String user : userList) {
+                if (user.endsWith("@" + domain)) {
+                    return true;
+                }
+            }
+        } catch (Exception e) {
+            log.error("도메인 예외 발생 : {}", e.toString());
         }
         return false;
     }
-    
+
     // 도메인 삭제
-    public boolean deleteDomain(String [] domainList) {
+    public boolean deleteDomain(String[] domainList) {
         boolean success = true;
-        
+
         for (String domain : domainList) {
             try {
                 String url = String.format("http://%s:%d/domains/%s", server, port, domain);
                 restTemplate.delete(url);
                 log.info("도메인 삭제: {}", domain);
-            }
-            catch (Exception e) {
+            } catch (Exception e) {
                 log.error("도메인 삭제 중 예외 발생 {}", e.toString());
                 success = false;
             }
         }
         return success;
     }
-    
+
     private String getBaseUrl() {
         return baseUrl;
     }
-    private String getUserUrl(String userId){
-        return baseUrl+"/"+userId;
+
+    private String getUserUrl(String userId) {
+        return baseUrl + "/" + userId;
+    }
+
+    // 테스트코드를 위한 getter
+    public String getServer() {
+        return server;
+    }
+
+    public int getPort() {
+        return port;
     }
 }
