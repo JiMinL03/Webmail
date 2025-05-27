@@ -29,7 +29,7 @@
                     <tr>
                         <td>ID</td>
                         <td>
-                            <input type="text" name="id" value="" size="20" />
+                            <input type="text" name="id" value="" size="20" required/>
                             @
                             <select name="domain" required>
                                 <option value="" disabled selected>-------</option>
@@ -41,12 +41,12 @@
                     </tr>
                     <tr>
                         <td>비밀번호</td>
-                        <td> <input type="password" name="password" value="" /> </td>
+                        <td> <input type="password" name="password" value="" required/> </td>
                     </tr>
                     <tr>
                         <td>비밀번호 확인</td>
                         <td>
-                            <input type="password" name="confirmPassword" value="" />
+                            <input type="password" name="confirmPassword" value="" required/>
                         </td>
                     </tr>
                     <tr>

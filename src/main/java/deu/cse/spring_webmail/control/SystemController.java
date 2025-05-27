@@ -65,7 +65,7 @@ public class SystemController {
     
     private static final String REDIRECT_ROOT = "redirect:/";
     private static final String REDIRECT_DOMAIN_ROOT = "redirect:/domain_menu";
-    private static final String SIGNUP_USER_ROOT = "redirect:/admin/sign_up_user";
+    private static final String SIGNUP_USER_ROOT = "admin/sign_up_user";
 
     @GetMapping("/")
     public String index() {
@@ -77,7 +77,7 @@ public class SystemController {
     }
 
     @RequestMapping(value = "/login.do", method = {RequestMethod.GET, RequestMethod.POST})
-    public String loginDo(@RequestParam Integer menu, RedirectAttributes attrs) { // [변경 부분] RedirectAttributes attrs 추가
+    public String loginDo(@RequestParam Integer menu, RedirectAttributes attrs) {
         String url = "";
         log.debug("로그인 처리: menu = {}", menu);
         switch (menu) { 
@@ -99,9 +99,8 @@ public class SystemController {
                     else{
                         session.setAttribute(SESSION_USERID, userid);
                         session.setAttribute("password", password);
-                        attrs.addFlashAttribute("msg", "사용자 로그인이 맞습니까?"); // [변경 부분]
-                        url = "redirect:/main_menu";  // URL이 http://localhost:8080/webmail/main_menu 이와 같이 됨. // main_menu.jsp로 이동
-                        // url = "/main_menu";  // URL이 http://localhost:8080/webmail/login.do?menu=91 이와 같이 되어 안 좋음
+                        attrs.addFlashAttribute("msg", "사용자 로그인이 맞습니까?");
+                        url = "redirect:/main_menu";
                     
                 }} else {
                     url = "redirect:/login_fail";
@@ -149,7 +148,7 @@ public class SystemController {
     }
     
     // 도메인 목록 보여주는 메서드 ( 재사용 많이 하는거라서 메서드로 따로 뺌 )
-    private void domainListModel(Model model) {
+    public void domainListModel(Model model) {
         UserAdminAgent agent = new UserAdminAgent(JAMES_HOST, JAMES_CONTROL_PORT,
                     ADMIN_PASSWORD, ADMINISTRATOR);
         List<String> domainList = agent.getDomainList();
@@ -174,12 +173,13 @@ public class SystemController {
     public String addDomainDo(@RequestParam("domain") String domainName, RedirectAttributes attrs) {
         UserAdminAgent agent = new UserAdminAgent(JAMES_HOST, JAMES_CONTROL_PORT,
                     ADMIN_PASSWORD, ADMINISTRATOR);
-        boolean success = agent.addDomain(domainName);
-        if (success) {
-            attrs.addFlashAttribute("msg", "도메인 등록 성공");
+        String message = agent.addDomain(domainName);
+        
+        try {
+            attrs.addFlashAttribute("msg", message);
         }
-        else {
-            attrs.addFlashAttribute("msg", "도메인 등록 실패");
+        catch (Exception e){
+            attrs.addFlashAttribute("msg", message);
         }
         return REDIRECT_DOMAIN_ROOT;
     }
@@ -223,23 +223,13 @@ public class SystemController {
     // 사용자 회원가입
     @GetMapping("/sign_up")
     public String addUser(Model model) {
-        UserAdminAgent agent = new UserAdminAgent(JAMES_HOST, JAMES_CONTROL_PORT,
-                    ADMIN_PASSWORD, ADMINISTRATOR);
-        List<String> domainList = agent.getDomainList();
-        model.addAttribute("domainList", domainList);
-        return "admin/sign_up_user";
+        domainListModel(model);
+        return SIGNUP_USER_ROOT;
     }
 
     @PostMapping("/add_user.do")
     public String addUserDo(@RequestParam String id, @RequestParam String password,@RequestParam String confirmPassword, @RequestParam String domain, Model model,
             RedirectAttributes attrs) {
-        
-        // 모든 항목 입력 완료했는지 검사
-        if (id == null || id.isBlank()|| domain == null || domain.isBlank() || password == null || password.isBlank() || confirmPassword == null || confirmPassword.isBlank()) {
-            model.addAttribute("msg", "항목 중 하나가 입력/선택이 되어있지 않습니다. 다시 입력해주시기 바랍니다.");
-            domainListModel(model);
-            return SIGNUP_USER_ROOT;
-        }
         
         // 비밀번호 검증
         if (!password.equals(confirmPassword)) {
@@ -257,17 +247,15 @@ public class SystemController {
 
             // 중복 가입자 확인
             if (agent.existUser(fullId)){
-                model.addAttribute("msg", "이미 가입되어 있는 계정입니다.");
-                return "index";
+                attrs.addFlashAttribute("msg", "이미 가입되어 있는 계정입니다.");
+                return REDIRECT_ROOT;
             }
-            
-            // 사용자 등록
-            if (agent.addUser(fullId, password)) {
-                attrs.addFlashAttribute("msg", String.format("사용자 회원가입(%s) 추가를 성공하였습니다.", fullId));
+            else if (agent.addUser(fullId, password)) {
+                attrs.addFlashAttribute("msg", String.format("사용자 회원가입(%s)을 성공하였습니다.", fullId));
                 return REDIRECT_ROOT;
             }
             else {
-                attrs.addFlashAttribute("msg", String.format("사용자 회원가입(%s) 추가를 실패하였습니다.", fullId));
+                attrs.addFlashAttribute("msg", String.format("사용자 회원가입(%s)을 실패하였습니다.", fullId));
                 return REDIRECT_ROOT;
             }
         } catch (Exception ex) {
@@ -275,7 +263,7 @@ public class SystemController {
             
         }
 
-        return "index";
+        return REDIRECT_ROOT;
     }
 
     @GetMapping("/delete_user")

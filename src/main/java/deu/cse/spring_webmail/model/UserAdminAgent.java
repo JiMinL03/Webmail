@@ -75,30 +75,23 @@ public class UserAdminAgent {
             return response.getStatusCode() == HttpStatus.NO_CONTENT;
         }
         catch (HttpClientErrorException e) {
-            log.error("HTTP error when adding user {}: {} - Body: {}",
-                    userId, e.getStatusCode(), e.getResponseBodyAsString());
+            log.error("HTTP 에러 발생");
         }
         catch (Exception e) {
-            log.error("Unexpected error adding user {}: {}", userId, e.toString());
+            log.error("에러 발생 {}:",  e.toString());
         }
         return false;
     }
     
     // 이미 유저가 가입된 계정일 때
     public boolean existUser(String userId) {
-        String url = getUserUrl(userId);
         try {
-            ResponseEntity<String> response = restTemplate.exchange(
-                    url, HttpMethod.PUT, null, String.class);
-            return response.getStatusCode() == HttpStatus.OK; 
-        }
-        catch(HttpClientErrorException e) {
-            return false;
+            List<String> userList = getUserList();
+            return userList.contains(userId);
         }
         catch (Exception e) {
-            log.error("Unexpected error adding user {}: {}", userId, e.toString());
+            return false;
         }
-        return false;
     }
     
 
@@ -127,7 +120,7 @@ public class UserAdminAgent {
             users.sort(String::compareTo);  // 알파벳 순으로 정렬
             return users;
         } catch (Exception e) {
-            log.error("Error fetching user list", e);
+            log.error("list에러 발생", e);
             return new LinkedList<>();
         }
     }
@@ -210,16 +203,17 @@ public class UserAdminAgent {
         } 
             return status;
         
-    }// 도메인 목록
+    }
+
+    // 도메인 목록
     public List<String> getDomainList() {
         String url = String.format("http://%s:%d/domains", server, port);
         try {
             ResponseEntity<List<String>> response = restTemplate.exchange(url, HttpMethod.GET, null, new ParameterizedTypeReference<List<String>>() {});
             List<String> domainList = response.getBody();
             
-            if (domainList == null) {
-                log.info("도메인 목록이 비어 있습니다.");
-                return new LinkedList<>();
+            if (domainList == null) { // 도메인 목록이 존재하지 않을 때
+                return new LinkedList<>(); // null이 아닌 비어있는 리스트 전달
             }
             return domainList;
         }
@@ -231,21 +225,29 @@ public class UserAdminAgent {
     
 
     // 도메인 추가
-    public boolean addDomain(String domain){
+    public String addDomain(String domain){
         String url = String.format("http://%s:%d/domains/%s", server, port, domain);
-        
+
+        // 이미 등록된 도메인인 경우
+        List<String> domainList = getDomainList(); 
+        if (domainList.contains(domain)) {
+            log.info("이미 등록된 도메인입니다. : {}", domain);
+            return "이미 등록된 도메인입니다.";
+        }
+            
         try {
             restTemplate.put(url,null);
             log.info("도메인 등록 성공: {}", domain);
-            return true;
+            return "도메인 등록 성공";
         }
         catch (HttpClientErrorException e){
             log.error("도메인 등록 실패: {} {} {}", domain, e.getStatusCode(), e.getResponseBodyAsString());
+            return "도메인 등록 실패";
         }
         catch (Exception e){
             log.error("도메인 등록 중 예외 발생 {}", e.toString());
+            return "도메인 등록 중 오류 발생";
         }
-        return false;
     }
     
     // 도메인을 사용자가 사용하고 있는지 검사
@@ -288,5 +290,14 @@ public class UserAdminAgent {
     private String getUserUrl(String userId){
         return baseUrl+"/"+userId;
 
+    }
+    
+    // 테스트코드를 위한 getter
+    public String getServer() {
+        return server;
+    }
+    
+    public int getPort() {
+        return port;
     }
 }
