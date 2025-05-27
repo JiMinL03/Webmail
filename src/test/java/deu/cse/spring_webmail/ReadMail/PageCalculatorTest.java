@@ -5,8 +5,8 @@
 package deu.cse.spring_webmail.ReadMail;
 
 import org.junit.jupiter.api.Test;
-import static org.junit.Assert.*;
-
+import org.junit.jupiter.api.*;
+import static org.junit.jupiter.api.Assertions.*;
 /**
  *
  * @author LG

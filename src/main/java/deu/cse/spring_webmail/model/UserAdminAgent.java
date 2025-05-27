@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -20,6 +21,7 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.stereotype.Component;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 
@@ -28,35 +30,20 @@ import org.springframework.web.client.RestTemplate;
  * @author jongmin
  */
 @Slf4j
+@Component
 public class UserAdminAgent {
+    @Value("${user.base-url}")
+    private String baseUrl;
 
     private String server;
     private int port;
-    Socket socket = null;
-    InputStream is = null;
-    OutputStream os = null;
     boolean isConnected = false;
     private String ADMIN_PASSWORD;
     private String ADMIN_ID;
-    // private final String EOL = "\n";
-    private final String EOL = "\r\n";
-
-    private final String baseUrl = "http://localhost:8000/users";
     private final RestTemplate restTemplate = new RestTemplate();
 
   
-    public UserAdminAgent(String server, int port,
-            String admin_pass, String admin_id) {
-        log.debug("UserAdminAgent created: server = " + server + ", port = " + port);
-        this.server = server;  // 127.0.0.1
-        this.port = port;  // 8000
-
-        this.ADMIN_PASSWORD = admin_pass;
-        this.ADMIN_ID = admin_id;
-        
-
-        log.debug("isConnected = {}, root.id = {}", isConnected, ADMIN_ID);
-    }
+    public UserAdminAgent() { }
 
     public boolean addUser(String userId, String password) {
 
@@ -112,33 +99,6 @@ public class UserAdminAgent {
             return new LinkedList<>();
         }
     }
-
-    private List<String> parseUserList(String message) {
-        List<String> userList = new LinkedList<String>();
-
-        // UNIX 형식을 윈도우 형식으로 변환하여 처리
-        message = message.replace("\r\n", "\n");
-
-        // 1: 줄 단위로 나누기
-        String[] lines = message.split("\n");
-        // 2: 첫 번째 줄에는 등록된 사용자 수에 대한 정보가 있음.
-        //    예) Existing accounts 7
-        String[] firstLine = lines[0].split(" ");
-        int numberOfUsers = Integer.parseInt(firstLine[2]);
-
-        // 3: 두 번째 줄부터는 각 사용자 ID 정보를 보여줌.
-        //    예) user: admin
-        for (int i = 1; i <= numberOfUsers; i++) {
-            // 3.1: 한 줄을 구분자 " "로 나눔.
-            String[] userLine = lines[i].split(" ");
-            // 3.2 사용자 ID가 관리자 ID와 일치하는 지 여부 확인
-            if (!userLine[1].equals(ADMIN_ID)) {
-                userList.add(userLine[1]);
-            }
-        }
-        return userList;
-    } // parseUserList()
-
     
     public boolean deleteUsers(String[] userList) {
         boolean allSuccess = true;
@@ -167,31 +127,7 @@ public class UserAdminAgent {
             return false;
         }
     }
-    public boolean quit() {
-        byte[] messageBuffer = new byte[1024];
-        boolean status = false;
-        // quit
-        try {
-            // 1: quit 명령 송신
-            String quitCommand = "quit" + EOL;
-            os.write(quitCommand.getBytes());
-            // 2: quit 명령에 대한 응답 수신
-            java.util.Arrays.fill(messageBuffer, (byte) 0);
-            //if (is.available() > 0) {
-            is.read(messageBuffer);
-            // 3: 메시지 분석
-            String recvMessage = new String(messageBuffer);
-            if (recvMessage.contains("closed")) {
-                status = true;
-            } else {
-                status = false;
-            }
-        } catch (IOException ex) {
-            log.error("quit() 예외: {}", ex);
-        } 
-            return status;
-        
-    }// 도메인 목록
+    
     public List<String> getDomainList() {
         String url = String.format("http://%s:%d/domains", server, port);
         try {
@@ -248,10 +184,9 @@ public class UserAdminAgent {
     }
     
     private String getBaseUrl() {
-    return baseUrl;
-}
+        return baseUrl;
+    }
     private String getUserUrl(String userId){
         return baseUrl+"/"+userId;
-
     }
 }

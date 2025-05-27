@@ -47,6 +47,8 @@ public class SystemController {
     private HttpSession session;
     @Autowired
     private HttpServletRequest request;
+    @Autowired
+    private UserAdminAgent userAdminAgent;
     
     private RestTemplate restTemplate = new RestTemplate();
 
@@ -157,9 +159,7 @@ public class SystemController {
     // 도메인 메뉴 (도메인 목록 보여주기)
     @GetMapping("/domain_menu")
     public String domainManage(Model model) {
-        UserAdminAgent domain = new UserAdminAgent(JAMES_HOST, JAMES_CONTROL_PORT,
-                    ADMIN_PASSWORD, ADMINISTRATOR);
-        List<String> domainList = domain.getDomainList();
+        List<String> domainList = userAdminAgent.getDomainList();
         model.addAttribute("domainList", domainList);
         return "admin/domain/domain_menu";
     }
@@ -172,9 +172,8 @@ public class SystemController {
     
     @PostMapping("/add_domain.do")
     public String addDomainDo(@RequestParam("domain") String domainName, RedirectAttributes attrs) {
-        UserAdminAgent domain = new UserAdminAgent(JAMES_HOST, JAMES_CONTROL_PORT,
-                    ADMIN_PASSWORD, ADMINISTRATOR);
-        boolean success = domain.addDomain(domainName);
+       
+        boolean success = userAdminAgent.addDomain(domainName);
         if (success) {
             attrs.addFlashAttribute("msg", "도메인 등록 성공");
         }
@@ -187,18 +186,16 @@ public class SystemController {
     // 도메인 삭제 => 삭제할 도메인 목록 보여주기
     @GetMapping("/delete_domain")
     public String deleteDomain(Model model) {
-        UserAdminAgent domain = new UserAdminAgent(JAMES_HOST, JAMES_CONTROL_PORT,
-                    ADMIN_PASSWORD, ADMINISTRATOR);
-        List<String> domainList = domain.getDomainList();
+       
+        List<String> domainList = userAdminAgent.getDomainList();
         model.addAttribute("domainList", domainList);
         return "admin/domain/delete_domain";
     }
     
     @PostMapping("/delete_domain.do")
     public String deleteDomainDo(@RequestParam("domain") String[] domainList, RedirectAttributes attrs) {
-        UserAdminAgent domain = new UserAdminAgent(JAMES_HOST, JAMES_CONTROL_PORT,
-                    ADMIN_PASSWORD, ADMINISTRATOR);
-        boolean success = domain.deleteDomain(domainList);
+        
+        boolean success = userAdminAgent.deleteDomain(domainList);
         if (success) {
             attrs.addFlashAttribute("msg", "도메인 삭제 성공");
         }
@@ -224,13 +221,9 @@ public class SystemController {
         }
 
         try {
-
-            UserAdminAgent agent = new UserAdminAgent(JAMES_HOST, JAMES_CONTROL_PORT,
-                    ADMIN_PASSWORD, ADMINISTRATOR);
-
             // if (addUser successful)  사용자 등록 성공 팝업창
             // else 사용자 등록 실패 팝업창
-            if (agent.addUser(id, password)) {
+            if (userAdminAgent.addUser(id, password)) {
                 attrs.addFlashAttribute("msg", String.format("사용자 회원가입(%s) 추가를 성공하였습니다.", id));
             } else {
                 attrs.addFlashAttribute("msg", String.format("사용자 회원가입(%s) 추가를 실패하였습니다.", id));
@@ -261,9 +254,8 @@ public class SystemController {
 
         try {
             
-            UserAdminAgent agent = new UserAdminAgent(JAMES_HOST, JAMES_CONTROL_PORT,
-                    ADMIN_PASSWORD, ADMINISTRATOR);
-            agent.deleteUsers(selectedUsers);  // 수정!!!
+           
+            userAdminAgent.deleteUsers(selectedUsers);  // 수정!!!
         } catch (Exception ex) {
             log.error("delete_user.do : 예외 = {}", ex);
         }
@@ -273,9 +265,7 @@ public class SystemController {
 
     private List<String> getUserList() {
 
-        UserAdminAgent agent = new UserAdminAgent(JAMES_HOST, JAMES_CONTROL_PORT,
-                ADMIN_PASSWORD, ADMINISTRATOR);
-        List<String> userList = agent.getUserList();
+        List<String> userList = userAdminAgent.getUserList();
         log.debug("userList = {}", userList);
 
         //(주의) root.id와 같이 '.'을 넣으면 안 됨.

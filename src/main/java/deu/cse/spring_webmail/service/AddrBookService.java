@@ -27,12 +27,15 @@ import org.springframework.core.ParameterizedTypeReference;
 @Service
 @Slf4j
 public class AddrBookService {
-    @Autowired
-    private AddrBookRepository addrBookRepository;
-    
-    @Autowired
-    private RestTemplate restTemplate;
+
+    private final AddrBookRepository addrBookRepository;
+    private final RestTemplate restTemplate;
     private final String userListUrl = "http://localhost:8000/users";
+
+    public AddrBookService(RestTemplate restTemplate, AddrBookRepository addrBookRepository) {
+        this.restTemplate = restTemplate;
+        this.addrBookRepository = addrBookRepository;
+    }
     
     public List<AddrBook> getAddr(String email){
         List<AddrBook> addrBooks = addrBookRepository.findAllByEmail(email);
