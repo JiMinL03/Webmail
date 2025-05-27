@@ -31,6 +31,9 @@ public class UserAdminAgent {
     private final RestTemplate restTemplate = new RestTemplate();
     private final String baseUrl = "http://localhost:8000/users";
 
+    public UserAdminAgent() {
+    }
+    
     public UserAdminAgent(String server, int port) {
         this.server = server;
         this.port = port;
