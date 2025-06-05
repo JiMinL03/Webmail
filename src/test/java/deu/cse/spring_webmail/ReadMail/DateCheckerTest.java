@@ -20,7 +20,7 @@ import static org.junit.Assert.*;
 public class DateCheckerTest {
 
     public boolean isThirtyDaysOld(String date) {
-        Date d1 = new Date(); // 현재 날짜
+        Date d1 = new Date();
 
         SimpleDateFormat sdf = new SimpleDateFormat("EEE MMM dd HH:mm:ss", Locale.ENGLISH);
         date = date.replaceAll("\\s+", " ").trim();
@@ -37,12 +37,12 @@ public class DateCheckerTest {
     }
 
     /**
-     * 현재 날짜에서 정확히 30일 전의 날짜를 입력했을 때 true를 반환하는지 테스트
+     * 현재 날짜에서 30일 전의 날짜
      */
     @Test
     public void testExactly30DaysOld() {
         Calendar calendar = Calendar.getInstance();
-        calendar.add(Calendar.DAY_OF_YEAR, -30); // 30일 전 날짜
+        calendar.add(Calendar.DAY_OF_YEAR, -30);
         Date thirtyDaysAgo = calendar.getTime();
 
         SimpleDateFormat sdf = new SimpleDateFormat("EEE MMM dd HH:mm:ss", Locale.ENGLISH);
@@ -52,12 +52,12 @@ public class DateCheckerTest {
     }
 
     /**
-     * 현재 날짜에서 29일 전인 경우 false를 반환하는지 테스트
+     * 현재 날짜에서 29일 전
      */
     @Test
     public void testLessThan30DaysOld() {
         Calendar calendar = Calendar.getInstance();
-        calendar.add(Calendar.DAY_OF_YEAR, -29); // 29일 전
+        calendar.add(Calendar.DAY_OF_YEAR, -29);
         Date date = calendar.getTime();
 
         SimpleDateFormat sdf = new SimpleDateFormat("EEE MMM dd HH:mm:ss", Locale.ENGLISH);
@@ -67,12 +67,12 @@ public class DateCheckerTest {
     }
 
     /**
-     * 현재 날짜에서 31일 전인 경우 false를 반환하는지 테스트
+     * 현재 날짜에서 31일 전
      */
     @Test
     public void testMoreThan30DaysOld() {
         Calendar calendar = Calendar.getInstance();
-        calendar.add(Calendar.DAY_OF_YEAR, -31); // 31일 전
+        calendar.add(Calendar.DAY_OF_YEAR, -31);
         Date date = calendar.getTime();
 
         SimpleDateFormat sdf = new SimpleDateFormat("EEE MMM dd HH:mm:ss", Locale.ENGLISH);
@@ -81,9 +81,6 @@ public class DateCheckerTest {
         assertFalse(isThirtyDaysOld(dateString));
     }
 
-    /**
-     * 잘못된 날짜 형식 입력 시 false를 반환하는지 테스트
-     */
     @Test
     public void testInvalidDateFormat() {
         String invalidDate = "not a real date";
